@@ -16,7 +16,7 @@
 - [x] RevenueCat: "Pro" subscription to remove ads.
 - [x] Widgets: Streak and daily stats on home screen.
 
-## Phase 4: Future Expansion
-- [ ] Tournaments: Real-time or asynchronous competitions.
-- [ ] Invite Friends: Challenge specific users to a Turing duel.
-- [ ] AI Models: Categorize texts by the AI model used (GPT-4 vs Human, Claude vs Human, etc.).
+## Phase 4: Future Expansion (Completed)
+- [x] Tournaments: Real-time or asynchronous competitions (Plan & Schema).
+- [x] Invite Friends: Challenge specific users to a Turing duel.
+- [x] AI Models: Categorize texts by the AI model used (GPT-4 vs Human, Claude vs Human, etc.).

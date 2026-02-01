@@ -5,6 +5,8 @@ import { getRandomPair, TextPair } from '../utils/mockData';
 import { useStore } from '../store/useStore';
 import * as Haptics from 'expo-haptics';
 import { showInterstitialIfReady } from '../utils/ads';
+import { Share } from 'react-native';
+import { Share2 } from 'lucide-react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -57,6 +59,18 @@ export const QuizView = () => {
         setSelectedIndex(null);
     };
 
+    const handleShare = async () => {
+        if (!currentPair) return;
+        try {
+            const message = `I just took the Turing Test challenge! 🤖🎨\nCategory: ${currentPair.category}\nStreak: ${stats.currentStreak}\nCan you spot the human?`;
+            await Share.share({
+                message,
+            });
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    };
+
     const handleGuess = (index: number) => {
         if (revealed) return;
         setSelectedIndex(index);
@@ -100,9 +114,20 @@ export const QuizView = () => {
             </ScrollView>
 
             {revealed && (
-                <TouchableOpacity style={styles.nextButton} onPress={nextQuestion}>
-                    <Text style={styles.nextButtonText}>Next Round</Text>
-                </TouchableOpacity>
+                <View style={styles.actions}>
+                    <View style={styles.modelReveal}>
+                        <Text style={styles.modelLabel}>AI Model:</Text>
+                        <Text style={styles.modelName}>{currentPair.aiModel}</Text>
+                    </View>
+                    <View style={styles.actionButtons}>
+                        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+                            <Share2 color={COLORS.white} size={20} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.nextButton} onPress={nextQuestion}>
+                            <Text style={styles.nextButtonText}>Next Round</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             )}
         </View>
     );
@@ -183,12 +208,48 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 40,
+        flex: 1,
     },
     nextButtonText: {
         color: COLORS.white,
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    actions: {
+        padding: 20,
+        backgroundColor: 'rgba(110, 44, 243, 0.05)',
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(110, 44, 243, 0.2)',
+    },
+    modelReveal: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 15,
+    },
+    modelLabel: {
+        color: COLORS.gray,
+        fontSize: 14,
+        marginRight: 6,
+    },
+    modelName: {
+        color: COLORS.cyan,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    actionButtons: {
+        flexDirection: 'row',
+        gap: 12,
+        alignItems: 'center',
+    },
+    shareButton: {
+        backgroundColor: 'rgba(255, 45, 171, 0.2)',
+        width: 50,
+        height: 50,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.pink,
     }
 });

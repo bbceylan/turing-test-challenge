@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, ActivityIndicator, Share } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useStore } from '../store/useStore';
 import { supabase } from '../utils/supabase';
-import { User, Edit3, Check, X } from 'lucide-react-native';
+import { User, Edit3, Check, X, Share2 } from 'lucide-react-native';
 
 export const ProfileScreen = () => {
     const { stats, session, user } = useStore();
@@ -58,6 +58,16 @@ export const ProfileScreen = () => {
         await supabase.auth.signOut();
     };
 
+    const handleInvite = async () => {
+        try {
+            await Share.share({
+                message: "Challenge me in the Turing Test! 🤖🎨 Can you spot the human? Download the app now and start your streak!",
+            });
+        } catch (error) {
+            console.error('Error sharing invitation:', error);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Agent Profile</Text>
@@ -107,6 +117,10 @@ export const ProfileScreen = () => {
 
             <TouchableOpacity style={styles.button}>
                 <Text style={styles.buttonText}>Achievements</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.button} onPress={handleInvite}>
+                <Text style={styles.buttonText}>Invite Friends</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.button, styles.premiumButton]}>
