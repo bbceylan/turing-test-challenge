@@ -24,8 +24,9 @@ A React Native (Expo) game where users guess between human-written and AI-genera
 - MVP complete.
 - Phase 2 (Social) complete.
 - Phase 3 (Monetization & Polish) complete.
+- Phase 4 (Future Expansion) complete (Schema & Logic).
 
 ## Next Steps for Future Agents
-- Finish Phase 4 (Tournaments & AI categorization).
 - Replace all placeholder AdMob and RevenueCat IDs with real credentials.
 - Enhance the TextPair source (currently using `mockData.ts`).
+- Implement the native layer for Home Screen Widgets if using Dev Builds.
