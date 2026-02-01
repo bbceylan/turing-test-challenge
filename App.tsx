@@ -18,6 +18,8 @@ const Tab = createBottomTabNavigator();
 import { supabase } from './src/utils/supabase';
 import { AuthScreen } from './src/screens/AuthScreen';
 
+import { registerForPushNotificationsAsync, scheduleDailyReminder } from './src/utils/notifications';
+
 export default function App() {
   const { loadStats, isLoading, session, setSession } = useStore();
 
@@ -25,6 +27,10 @@ export default function App() {
     const setup = async () => {
       await initDb();
       await loadStats();
+
+      // Setup Notifications
+      registerForPushNotificationsAsync();
+      scheduleDailyReminder();
 
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);

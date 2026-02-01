@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import { getDb } from '../db/client';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../utils/supabase';
 
 interface UserStats {
     totalXp: number;
     currentStreak: number;
     maxStreak: number;
 }
-
-import { Session, User } from '@supabase/supabase-js';
 
 interface AppState {
     stats: UserStats;
@@ -17,6 +17,7 @@ interface AppState {
     loadStats: () => Promise<void>;
     addXp: (xp: number, correct: boolean) => Promise<void>;
     setSession: (session: Session | null) => void;
+    syncStatsToRemote: () => Promise<void>;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -31,6 +32,9 @@ export const useStore = create<AppState>((set, get) => ({
 
     setSession: (session) => {
         set({ session, user: session?.user ?? null });
+        if (session) {
+            get().syncStatsToRemote();
+        }
     },
 
     loadStats: async () => {
@@ -48,8 +52,28 @@ export const useStore = create<AppState>((set, get) => ({
         }
     },
 
+    syncStatsToRemote: async () => {
+        const { session, stats } = get();
+        if (!session?.user) return;
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .upsert({
+                    id: session.user.id,
+                    total_xp: stats.totalXp,
+                    updated_at: new Date().toISOString(),
+                });
+
+            if (error) throw error;
+            console.log('Stats synced to Supabase');
+        } catch (error) {
+            console.error('Error syncing stats:', error);
+        }
+    },
+
     addXp: async (xp: number, correct: boolean) => {
-        const { stats } = get();
+        const { stats, syncStatsToRemote, session } = get();
         const db = await getDb();
 
         const newXp = stats.totalXp + (correct ? xp : 0);
@@ -81,5 +105,9 @@ export const useStore = create<AppState>((set, get) => ({
                 maxStreak: newMaxStreak,
             }
         });
+
+        if (session) {
+            await syncStatsToRemote();
+        }
     },
 }));

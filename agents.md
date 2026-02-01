@@ -15,11 +15,12 @@ A React Native (Expo) game where users guess between human-written and AI-genera
 - **SQLite Performance**: Using `expo-sqlite`'s async API. Ensure `initDb` is called once at App startup.
 - **Aesthetic**: "AI Slop" / Synthwave style is a hard requirement. Use high-contrast colors and semi-transparent "glass" cards.
 - **Milestones**: Achievement logic is integrated into the Zustand store's `addXp` action to ensure atomicity between score updates and achievement checks.
+- **Sync Logic**: Supabase `profiles` table acts as the remote leaderboard source. Always sync after a successful XP gain if a session exists.
+- **Notifications**: Scheduling daily reminders requires `expo-notifications`. Ensure `registerForPushNotificationsAsync` is called early to capture device tokens.
 
 ## Current Status
-- MVP complete (Play, Leaderboard, Achievements, Profile).
-- Auth integrated via Supabase.
-- Navigation structure finalized.
+- MVP complete.
+- Phase 2 (Social & Notifications) complete.
 
 ## Next Steps for Future Agents
 - Replace Supabase placeholder keys in `src/utils/supabase.ts`.

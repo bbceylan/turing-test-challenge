@@ -6,10 +6,10 @@
 - [x] Local Storage: SQLite integration for offline play.
 - [x] Initial Design: Synthwave (Purple/Pink/Navy) theme.
 
-## Phase 2: Competition & Social
-- [ ] Accounts: Supabase Auth integration.
-- [ ] Leaderboard: Global and weekly rankings.
-- [ ] Push Notifications: Daily challenges and streak reminders.
+## Phase 2: Competition & Social (Completed)
+- [x] Accounts: Supabase Auth integration.
+- [x] Leaderboard: Global and weekly rankings.
+- [x] Push Notifications: Daily challenges and streak reminders.
 
 ## Phase 3: Monetization & Polish
 - [ ] Ads: Interstitial and banner ads.
