@@ -3,6 +3,7 @@ import { getDb } from '../db/client';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase';
 import { updateWidgetData } from '../utils/widget';
+import Constants from 'expo-constants';
 
 interface UserStats {
     totalXp: number;
@@ -23,8 +24,7 @@ interface AppState {
     setIsPro: (isPro: boolean) => void;
 }
 
-import Purchases from 'react-native-purchases';
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 
 export const useStore = create<AppState>((set, get) => ({
     stats: {
@@ -45,10 +45,13 @@ export const useStore = create<AppState>((set, get) => ({
             get().syncStatsToRemote();
 
             // Initialize RevenueCat
-            if (Platform.OS === 'ios') {
-                Purchases.configure({ apiKey: 'goog_EXAMPLE_REVENUECAT_ID' });
+            const hasNativePurchases = !!NativeModules.RNPurchases;
+            if (hasNativePurchases) {
+                const Purchases = require('react-native-purchases').default;
+                const apiKey = Platform.OS === 'ios' ? 'goog_EXAMPLE_REVENUECAT_ID' : 'goog_EXAMPLE_REVENUECAT_ID';
+                Purchases.configure({ apiKey });
             } else {
-                Purchases.configure({ apiKey: 'goog_EXAMPLE_REVENUECAT_ID' });
+                console.log('Expo Go or missing native module detected. RevenueCat disabled.');
             }
         }
     },
