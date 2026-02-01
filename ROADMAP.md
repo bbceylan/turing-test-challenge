@@ -11,10 +11,10 @@
 - [x] Leaderboard: Global and weekly rankings.
 - [x] Push Notifications: Daily challenges and streak reminders.
 
-## Phase 3: Monetization & Polish
-- [ ] Ads: Interstitial and banner ads.
-- [ ] RevenueCat: "Pro" subscription to remove ads.
-- [ ] Widgets: Streak and daily stats on home screen.
+## Phase 3: Monetization & Polish (Completed)
+- [x] Ads: Interstitial and banner ads.
+- [x] RevenueCat: "Pro" subscription to remove ads.
+- [x] Widgets: Streak and daily stats on home screen.
 
 ## Phase 4: Future Expansion
 - [ ] Tournaments: Real-time or asynchronous competitions.

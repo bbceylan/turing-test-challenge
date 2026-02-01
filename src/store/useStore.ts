@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { getDb } from '../db/client';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase';
+import { updateWidgetData } from '../utils/widget';
 
 interface UserStats {
     totalXp: number;
@@ -12,13 +13,18 @@ interface UserStats {
 interface AppState {
     stats: UserStats;
     isLoading: boolean;
+    isPro: boolean;
     user: User | null;
     session: Session | null;
     loadStats: () => Promise<void>;
     addXp: (xp: number, correct: boolean) => Promise<void>;
     setSession: (session: Session | null) => void;
     syncStatsToRemote: () => Promise<void>;
+    setIsPro: (isPro: boolean) => void;
 }
+
+import Purchases from 'react-native-purchases';
+import { Platform } from 'react-native';
 
 export const useStore = create<AppState>((set, get) => ({
     stats: {
@@ -27,13 +33,23 @@ export const useStore = create<AppState>((set, get) => ({
         maxStreak: 0,
     },
     isLoading: true,
+    isPro: false,
     user: null,
     session: null,
+
+    setIsPro: (isPro) => set({ isPro }),
 
     setSession: (session) => {
         set({ session, user: session?.user ?? null });
         if (session) {
             get().syncStatsToRemote();
+
+            // Initialize RevenueCat
+            if (Platform.OS === 'ios') {
+                Purchases.configure({ apiKey: 'goog_EXAMPLE_REVENUECAT_ID' });
+            } else {
+                Purchases.configure({ apiKey: 'goog_EXAMPLE_REVENUECAT_ID' });
+            }
         }
     },
 
@@ -105,6 +121,8 @@ export const useStore = create<AppState>((set, get) => ({
                 maxStreak: newMaxStreak,
             }
         });
+
+        updateWidgetData({ currentStreak: newStreak, totalXp: newXp });
 
         if (session) {
             await syncStatsToRemote();

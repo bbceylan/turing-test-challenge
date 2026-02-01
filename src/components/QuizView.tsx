@@ -3,6 +3,35 @@ import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-nati
 import { COLORS } from '../constants/theme';
 import { getRandomPair, TextPair } from '../utils/mockData';
 import { useStore } from '../store/useStore';
+import * as Haptics from 'expo-haptics';
+import { showInterstitialIfReady } from '../utils/ads';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    Easing
+} from 'react-native-reanimated';
+
+const AnimatedScanline = () => {
+    const translateY = useSharedValue(-100);
+
+    useEffect(() => {
+        translateY.value = withRepeat(
+            withTiming(600, { duration: 3000, easing: Easing.linear }),
+            -1,
+            false
+        );
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translateY.value }],
+    }));
+
+    return (
+        <Animated.View style={[styles.scanline, animatedStyle]} />
+    );
+};
 
 export const QuizView = () => {
     const [currentPair, setCurrentPair] = useState<TextPair | null>(null);
@@ -33,19 +62,26 @@ export const QuizView = () => {
         setSelectedIndex(index);
         setRevealed(true);
         const isCorrect = options[index].isHuman;
+
+        if (isCorrect) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+
         addXp(10, isCorrect);
+        showInterstitialIfReady();
     };
 
     if (!currentPair) return null;
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
+            <AnimatedScanline />
+            <ScrollView contentContainerStyle={styles.scrollContent}>
                 <Text style={styles.category}>{currentPair.category}</Text>
                 <Text style={styles.streak}>Streak: {stats.currentStreak}</Text>
-            </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
                 {options.map((option, index) => (
                     <TouchableOpacity
                         key={index}
@@ -77,6 +113,25 @@ const styles = StyleSheet.create({
         flex: 1,
         width: '100%',
         padding: 20,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    scanline: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 2,
+        backgroundColor: 'rgba(0, 240, 255, 0.2)',
+        zIndex: 10,
+        shadowColor: COLORS.cyan,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 10,
+    },
+    scrollContent: {
+        padding: 20,
+        paddingBottom: 40,
     },
     header: {
         flexDirection: 'row',

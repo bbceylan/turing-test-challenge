@@ -19,6 +19,7 @@ import { supabase } from './src/utils/supabase';
 import { AuthScreen } from './src/screens/AuthScreen';
 
 import { registerForPushNotificationsAsync, scheduleDailyReminder } from './src/utils/notifications';
+import { loadInterstitial } from './src/utils/ads';
 
 export default function App() {
   const { loadStats, isLoading, session, setSession } = useStore();
@@ -31,6 +32,7 @@ export default function App() {
       // Setup Notifications
       registerForPushNotificationsAsync();
       scheduleDailyReminder();
+      loadInterstitial();
 
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
