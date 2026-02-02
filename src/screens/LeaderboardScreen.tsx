@@ -5,6 +5,7 @@ import { supabase } from '../utils/supabase';
 import { useStore } from '../store/useStore';
 import { Globe, Calendar, Lock } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Skeleton } from '../components/Skeleton';
 
 interface Player {
     id: string;
@@ -107,8 +108,14 @@ export const LeaderboardScreen = () => {
 
         if (loading && !refreshing) {
             return (
-                <View style={styles.center}>
-                    <ActivityIndicator color={colors.text.accent} size="large" />
+                <View style={{ flex: 1, gap: 10, marginTop: 10 }}>
+                    {[1, 2, 3, 4, 5].map((key) => (
+                        <View key={key} style={[styles.row, { backgroundColor: colors.background.card, borderColor: colors.border.default, opacity: 0.5 }]}>
+                            <Skeleton width={30} height={20} style={{ marginRight: 10 }} />
+                            <Skeleton width="60%" height={20} style={{ flex: 1 }} />
+                            <Skeleton width={50} height={20} />
+                        </View>
+                    ))}
                 </View>
             );
         }

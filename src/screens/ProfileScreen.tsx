@@ -6,7 +6,7 @@ import { supabase } from '../utils/supabase';
 import { User, Edit3, Check, X, Share2 } from 'lucide-react-native';
 
 export const ProfileScreen = () => {
-    const { stats, session, user, isGuest, setGuest } = useStore();
+    const { stats, session, user, isGuest, setGuest, isPro } = useStore();
     const { colors } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [username, setUsername] = useState('');
@@ -153,15 +153,26 @@ export const ProfileScreen = () => {
                 </View>
             </View>
 
-            <TouchableOpacity style={[styles.button, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}>
+            <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}
+                accessibilityRole="button"
+                accessibilityLabel="View Achievements"
+                accessibilityHint="See your earned achievements and progress"
+            >
                 <Text style={[styles.buttonText, { color: colors.text.primary }]}>Achievements</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.button, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]} onPress={handleInvite}>
+            <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}
+                onPress={handleInvite}
+                accessibilityRole="button"
+                accessibilityLabel="Invite Friends"
+                accessibilityHint="Share the app with your friends"
+            >
                 <Text style={[styles.buttonText, { color: colors.text.primary }]}>Invite Friends</Text>
             </TouchableOpacity>
 
-            {!useStore.getState().isPro && (
+            {!isPro && (
                 <TouchableOpacity
                     style={[
                         styles.button,
@@ -169,6 +180,9 @@ export const ProfileScreen = () => {
                         { backgroundColor: colors.text.highlight, borderColor: colors.text.highlight }
                     ]}
                     onPress={handlePurchase}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go Ad-Free"
+                    accessibilityHint="Purchase Pro subscription to remove ads"
                 >
                     <Text style={[styles.buttonText, { color: colors.text.primary }]}>Go Ad-Free</Text>
                 </TouchableOpacity>
@@ -181,6 +195,9 @@ export const ProfileScreen = () => {
                     { borderColor: colors.feedback.error }
                 ]}
                 onPress={handleSignOut}
+                accessibilityRole="button"
+                accessibilityLabel={isGuest ? "Sign In" : "Sign Out"}
+                accessibilityHint={isGuest ? "Sign in to your account" : "Sign out of your account"}
             >
                 <Text style={[styles.buttonText, { color: colors.text.primary }]}>{isGuest ? 'Sign Up / Sign In' : 'Sign Out'}</Text>
             </TouchableOpacity>

@@ -129,6 +129,9 @@ export const QuizView = () => {
                             ]}
                             onPress={() => handleGuess(index)}
                             disabled={revealed}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Option ${index + 1}: ${option.text}`}
+                            accessibilityHint="Double tap to select this answer"
                         >
                             <Text style={[styles.text, { color: colors.text.primary }]}>{option.text}</Text>
                         </TouchableOpacity>
@@ -161,6 +164,9 @@ export const QuizView = () => {
                                 }
                             ]}
                             onPress={handleShare}
+                            accessibilityRole="button"
+                            accessibilityLabel="Share your result"
+                            accessibilityHint="Share this challenge with friends"
                         >
                             <Share2 color={colors.text.primary} size={20} />
                         </TouchableOpacity>
@@ -170,6 +176,9 @@ export const QuizView = () => {
                                 { backgroundColor: colors.border.default }
                             ]}
                             onPress={nextQuestion}
+                            accessibilityRole="button"
+                            accessibilityLabel="Next Question"
+                            accessibilityHint="Proceed to the next round"
                         >
                             <Text style={[styles.nextButtonText, { color: colors.text.primary }]}>Next Round</Text>
                         </TouchableOpacity>

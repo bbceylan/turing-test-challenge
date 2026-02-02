@@ -34,3 +34,7 @@
 - [x] Configuration: Validated via `app.json` (Privacy Manifests included).
 - [x] Apple Store Compliance: Privacy Manifest configured for UserDefaults/FileTimestamp.
 - [x] Release: Version bumped to 1.0.1. Ready for build.
+
+## Phase 11: Polish & Accessibility (In Progress)
+- [ ] Accessibility: Ensure screen reader support and dynamic type scaling.
+- [ ] Polish: Improve loading states and error recovery UX.
