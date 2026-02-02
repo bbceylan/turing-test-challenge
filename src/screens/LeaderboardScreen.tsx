@@ -13,6 +13,15 @@ interface Player {
 
 type Tab = 'GLOBAL' | 'WEEKLY';
 
+// Extracted & Memoized Item Component for Performance
+const LeaderboardItem = React.memo(({ item, index }: { item: Player; index: number }) => (
+    <View style={styles.row}>
+        <Text style={styles.rank}>#{index + 1}</Text>
+        <Text style={styles.name}>{item.username || 'Anonymous Agent'}</Text>
+        <Text style={styles.xp}>{item.total_xp} XP</Text>
+    </View>
+));
+
 export const LeaderboardScreen = () => {
     const { isGuest } = useStore();
     const [players, setPlayers] = useState<Player[]>([]);
@@ -21,7 +30,7 @@ export const LeaderboardScreen = () => {
     const [activeTab, setActiveTab] = useState<Tab>('GLOBAL');
     const [error, setError] = useState<string | null>(null);
 
-    const fetchLeaderboard = async () => {
+    const fetchLeaderboard = React.useCallback(async () => {
         if (isGuest) {
             setLoading(false);
             setRefreshing(false);
@@ -30,7 +39,6 @@ export const LeaderboardScreen = () => {
 
         setError(null);
         try {
-            // Fake "Weekly" by just limiting or using same data for now since backend support is missing
             const query = supabase
                 .from('profiles')
                 .select('id, username, total_xp')
@@ -48,16 +56,16 @@ export const LeaderboardScreen = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [activeTab, isGuest]);
 
     useEffect(() => {
         fetchLeaderboard();
-    }, [activeTab, isGuest]);
+    }, [fetchLeaderboard]);
 
-    const onRefresh = () => {
+    const onRefresh = React.useCallback(() => {
         setRefreshing(true);
         fetchLeaderboard();
-    };
+    }, [fetchLeaderboard]);
 
     const renderTabs = () => (
         <View style={styles.tabContainer}>
@@ -121,14 +129,11 @@ export const LeaderboardScreen = () => {
                         <Text style={styles.emptySubText}>Be the first to sync your XP!</Text>
                     </View>
                 }
-                renderItem={({ item, index }) => (
-                    <View style={styles.row}>
-                        <Text style={styles.rank}>#{index + 1}</Text>
-                        <Text style={styles.name}>{item.username || 'Anonymous Agent'}</Text>
-                        <Text style={styles.xp}>{item.total_xp} XP</Text>
-                    </View>
-                )}
+                renderItem={({ item, index }) => <LeaderboardItem item={item} index={index} />}
                 contentContainerStyle={{ paddingBottom: 20 }}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={5}
             />
         );
     };
