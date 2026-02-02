@@ -91,3 +91,27 @@ jest.mock('@react-navigation/native', () => {
         }),
     };
 });
+
+// Mock Expo Haptics
+jest.mock('expo-haptics', () => ({
+    notificationAsync: jest.fn(),
+    impactAsync: jest.fn(),
+    selectionAsync: jest.fn(),
+    NotificationFeedbackType: {
+        Success: 'Success',
+        Warning: 'Warning',
+        Error: 'Error',
+    },
+    ImpactFeedbackStyle: {
+        Light: 'Light',
+        Medium: 'Medium',
+        Heavy: 'Heavy',
+    },
+}));
+
+// Mock Reanimated
+jest.mock('react-native-reanimated', () => {
+    const Reanimated = require('react-native-reanimated/mock');
+    Reanimated.default.call = () => { };
+    return Reanimated;
+});
