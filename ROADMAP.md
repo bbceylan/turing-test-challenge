@@ -21,10 +21,14 @@
 - [ ] Invite Friends: Challenge specific users to a Turing duel.
 - [ ] AI Models: Categorize texts by the AI model used.
 
-## Phase 5: Privacy & Safety (New)
-- [ ] Data Scrubbing: Ensure no journal content ever leaves device.
-- [ ] Crash Reporting: Mask sensitive strings in logs.
-- [ ] Local Encryption: Encrypt SQLite database at rest (Optional post-MVP).
+## Phase 5: Privacy & Safety (Completed)
+- [x] Data Scrubbing: Ensure no journal content ever leaves device.
+- [x] Crash Reporting: Mask sensitive strings in logs.
+- [x] Local Encryption: Encrypt SQLite database at rest (Optional post-MVP).
+
+## Phase 8: Architecture & UX Polish (Completed)
+- [x] Architecture: Extract game logic (`useGameLogic`) and Semantic Theming (`useTheme`).
+- [x] UX: Haptics (Streak milestones) and Animations (Reanimated).
 
 ## Phase 6: Production & Hardening (Completed)
 - [x] Configuration: Validated via `app.json` (Privacy Manifests included).

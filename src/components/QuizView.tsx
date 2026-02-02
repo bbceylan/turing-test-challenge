@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-nati
 import { COLORS } from '../constants/theme';
 import { getRandomPair, TextPair } from '../utils/mockData';
 import { useStore } from '../store/useStore';
+import { useGameLogic } from '../hooks/useGameLogic';
 import * as Haptics from 'expo-haptics';
 import { showInterstitialIfReady } from '../utils/ads';
 import { Share } from 'react-native';
@@ -12,8 +13,12 @@ import Animated, {
     useAnimatedStyle,
     withRepeat,
     withTiming,
-    Easing
+    Easing,
+    FadeInDown
 } from 'react-native-reanimated';
+import { useTheme } from '../hooks/useTheme';
+
+// ... (AnimatedScanline is here, skipping)
 
 const AnimatedScanline = () => {
     const translateY = useSharedValue(-100);
@@ -36,28 +41,33 @@ const AnimatedScanline = () => {
 };
 
 export const QuizView = () => {
-    const [currentPair, setCurrentPair] = useState<TextPair | null>(null);
-    const [revealed, setRevealed] = useState(false);
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-    const [options, setOptions] = useState<{ text: string, isHuman: boolean }[]>([]);
+    const {
+        currentPair,
+        options,
+        revealed,
+        selectedIndex,
+        nextQuestion,
+        submitGuess
+    } = useGameLogic();
+    const { stats } = useStore();
+    const { colors } = useTheme();
 
-    const { addXp, stats } = useStore();
+    const cardOpacity = useSharedValue(0);
+    const cardTranslateY = useSharedValue(50);
 
     useEffect(() => {
-        nextQuestion();
-    }, []);
+        if (currentPair) {
+            cardOpacity.value = 0;
+            cardTranslateY.value = 50;
+            cardOpacity.value = withTiming(1, { duration: 500 });
+            cardTranslateY.value = withTiming(0, { duration: 500, easing: Easing.out(Easing.back(1.5)) });
+        }
+    }, [currentPair]);
 
-    const nextQuestion = () => {
-        const pair = getRandomPair();
-        setCurrentPair(pair);
-        const sortedOptions = [
-            { text: pair.human, isHuman: true },
-            { text: pair.ai, isHuman: false }
-        ].sort(() => Math.random() - 0.5);
-        setOptions(sortedOptions);
-        setRevealed(false);
-        setSelectedIndex(null);
-    };
+    const animatedCardStyle = useAnimatedStyle(() => ({
+        opacity: cardOpacity.value,
+        transform: [{ translateY: cardTranslateY.value }]
+    }));
 
     const handleShare = async () => {
         if (!currentPair) return;
@@ -72,62 +82,99 @@ export const QuizView = () => {
     };
 
     const handleGuess = (index: number) => {
-        if (revealed) return;
-        setSelectedIndex(index);
-        setRevealed(true);
-        const isCorrect = options[index].isHuman;
+        const result = submitGuess(index);
+        if (!result) return;
 
-        if (isCorrect) {
+        if (result.isCorrect) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            // Streak Haptic: Heavy impact every 5 streak
+            if ((stats.currentStreak + 1) % 5 === 0) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            }
         } else {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
-
-        addXp(10, isCorrect);
-        showInterstitialIfReady();
     };
 
     if (!currentPair) return null;
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
             <AnimatedScanline />
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.category}>{currentPair.category}</Text>
-                <Text style={styles.streak}>Streak: {stats.currentStreak}</Text>
+                <Text style={[styles.category, { color: colors.text.accent }]}>{currentPair.category}</Text>
+                <Text style={[styles.streak, { color: colors.text.highlight }]}>Streak: {stats.currentStreak}</Text>
 
                 {options.map((option, index) => (
-                    <TouchableOpacity
-                        key={index}
-                        style={[
-                            styles.card,
-                            selectedIndex === index && styles.selectedCard,
-                            revealed && option.isHuman && styles.correctCard,
-                            revealed && selectedIndex === index && !option.isHuman && styles.wrongCard
-                        ]}
-                        onPress={() => handleGuess(index)}
-                        disabled={revealed}
-                    >
-                        <Text style={styles.text}>{option.text}</Text>
-                    </TouchableOpacity>
+                    <Animated.View key={index} style={animatedCardStyle}>
+                        <TouchableOpacity
+                            style={[
+                                styles.card,
+                                {
+                                    backgroundColor: colors.background.card,
+                                    borderColor: colors.border.default
+                                },
+                                selectedIndex === index && {
+                                    borderColor: colors.border.active,
+                                    borderWidth: 2
+                                },
+                                revealed && option.isHuman && {
+                                    backgroundColor: colors.feedback.success,
+                                    borderColor: colors.border.success
+                                },
+                                revealed && selectedIndex === index && !option.isHuman && {
+                                    backgroundColor: colors.feedback.error,
+                                    borderColor: colors.border.error
+                                }
+                            ]}
+                            onPress={() => handleGuess(index)}
+                            disabled={revealed}
+                        >
+                            <Text style={[styles.text, { color: colors.text.primary }]}>{option.text}</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
                 ))}
             </ScrollView>
 
             {revealed && (
-                <View style={styles.actions}>
+                <Animated.View
+                    entering={FadeInDown.delay(200)}
+                    style={[
+                        styles.actions,
+                        {
+                            backgroundColor: colors.background.secondary,
+                            borderTopColor: colors.background.scanline
+                        }
+                    ]}
+                >
                     <View style={styles.modelReveal}>
-                        <Text style={styles.modelLabel}>AI Model:</Text>
-                        <Text style={styles.modelName}>{currentPair.aiModel}</Text>
+                        <Text style={[styles.modelLabel, { color: colors.text.secondary }]}>AI Model:</Text>
+                        <Text style={[styles.modelName, { color: colors.text.accent }]}>{currentPair.aiModel}</Text>
                     </View>
                     <View style={styles.actionButtons}>
-                        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                            <Share2 color={COLORS.white} size={20} />
+                        <TouchableOpacity
+                            style={[
+                                styles.shareButton,
+                                {
+                                    backgroundColor: colors.background.secondary,
+                                    borderColor: colors.border.error
+                                }
+                            ]}
+                            onPress={handleShare}
+                        >
+                            <Share2 color={colors.text.primary} size={20} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.nextButton} onPress={nextQuestion}>
-                            <Text style={styles.nextButtonText}>Next Round</Text>
+                        <TouchableOpacity
+                            style={[
+                                styles.nextButton,
+                                { backgroundColor: colors.border.default }
+                            ]}
+                            onPress={nextQuestion}
+                        >
+                            <Text style={[styles.nextButtonText, { color: colors.text.primary }]}>Next Round</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
+                </Animated.View>
             )}
         </View>
     );

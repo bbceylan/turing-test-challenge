@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, ActivityIndicator, Share } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { useStore } from '../store/useStore';
 import { supabase } from '../utils/supabase';
 import { User, Edit3, Check, X, Share2 } from 'lucide-react-native';
 
 export const ProfileScreen = () => {
     const { stats, session, user, isGuest, setGuest } = useStore();
+    const { colors } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [username, setUsername] = useState('');
     const [loading, setLoading] = useState(false);
@@ -93,11 +94,7 @@ export const ProfileScreen = () => {
 
             const Purchases = require('react-native-purchases').default;
 
-            // For MVP/Demo: Just try to restore directly or confirm
-            // In a real app, you'd fetch offerings here.
             try {
-                // const offerings = await Purchases.getOfferings();
-                // ... logic to show paywall
                 Alert.alert('Coming Soon', 'The Pro subscription is not yet configured in RevenueCat.');
             } catch (e: any) {
                 Alert.alert('Store Error', e.message);
@@ -110,68 +107,82 @@ export const ProfileScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Agent Profile</Text>
+        <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+            <Text style={[styles.title, { color: colors.text.accent }]}>Agent Profile</Text>
 
-            <View style={styles.profileHeader}>
-                <View style={styles.avatarContainer}>
-                    <User color={COLORS.cyan} size={40} />
+            <View style={[styles.profileHeader, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+                <View style={[styles.avatarContainer, { backgroundColor: colors.background.secondary, borderColor: colors.border.success }]}>
+                    <User color={colors.text.accent} size={40} />
                 </View>
                 <View style={styles.profileInfo}>
                     {isEditing ? (
                         <View style={styles.editRow}>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { color: colors.text.primary, borderBottomColor: colors.border.active }]}
                                 value={username}
                                 onChangeText={setUsername}
                                 placeholder="Agent Name"
-                                placeholderTextColor={COLORS.gray}
+                                placeholderTextColor={colors.text.secondary}
                                 autoFocus
                             />
                             <TouchableOpacity onPress={handleUpdateUsername} disabled={loading}>
-                                {loading ? <ActivityIndicator size="small" color={COLORS.cyan} /> : <Check color={COLORS.cyan} size={24} />}
+                                {loading ? <ActivityIndicator size="small" color={colors.text.accent} /> : <Check color={colors.text.accent} size={24} />}
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => setIsEditing(false)}>
-                                <X color={COLORS.pink} size={24} />
+                                <X color={colors.feedback.error} size={24} />
                             </TouchableOpacity>
                         </View>
                     ) : (
                         <TouchableOpacity style={styles.editRow} onPress={() => !isGuest && setIsEditing(true)}>
-                            <Text style={styles.username}>{username || 'Click to set name'}</Text>
-                            {!isGuest && <Edit3 color={COLORS.gray} size={16} style={{ marginLeft: 8 }} />}
+                            <Text style={[styles.username, { color: colors.text.primary }]}>{username || 'Click to set name'}</Text>
+                            {!isGuest && <Edit3 color={colors.text.secondary} size={16} style={{ marginLeft: 8 }} />}
                         </TouchableOpacity>
                     )}
-                    <Text style={styles.email}>{isGuest ? 'Offline Mode' : session?.user.email}</Text>
+                    <Text style={[styles.email, { color: colors.text.secondary }]}>{isGuest ? 'Offline Mode' : session?.user.email}</Text>
                 </View>
             </View>
 
             <View style={styles.statsContainer}>
-                <View style={styles.statBox}>
-                    <Text style={styles.statLabel}>Total XP</Text>
-                    <Text style={styles.statValue}>{stats.totalXp}</Text>
+                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+                    <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Total XP</Text>
+                    <Text style={[styles.statValue, { color: colors.text.primary }]}>{stats.totalXp}</Text>
                 </View>
-                <View style={styles.statBox}>
-                    <Text style={styles.statLabel}>Best Streak</Text>
-                    <Text style={styles.statValue}>{stats.maxStreak}</Text>
+                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+                    <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Best Streak</Text>
+                    <Text style={[styles.statValue, { color: colors.text.primary }]}>{stats.maxStreak}</Text>
                 </View>
             </View>
 
-            <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>Achievements</Text>
+            <TouchableOpacity style={[styles.button, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}>
+                <Text style={[styles.buttonText, { color: colors.text.primary }]}>Achievements</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.button} onPress={handleInvite}>
-                <Text style={styles.buttonText}>Invite Friends</Text>
+            <TouchableOpacity style={[styles.button, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]} onPress={handleInvite}>
+                <Text style={[styles.buttonText, { color: colors.text.primary }]}>Invite Friends</Text>
             </TouchableOpacity>
 
             {!useStore.getState().isPro && (
-                <TouchableOpacity style={[styles.button, styles.premiumButton]} onPress={handlePurchase}>
-                    <Text style={styles.buttonText}>Go Ad-Free</Text>
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        styles.premiumButton,
+                        { backgroundColor: colors.text.highlight, borderColor: colors.text.highlight }
+                    ]}
+                    onPress={handlePurchase}
+                >
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>Go Ad-Free</Text>
                 </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={[styles.button, styles.signOutButton]} onPress={handleSignOut}>
-                <Text style={styles.buttonText}>{isGuest ? 'Sign Up / Sign In' : 'Sign Out'}</Text>
+            <TouchableOpacity
+                style={[
+                    styles.button,
+                    styles.signOutButton,
+                    { borderColor: colors.feedback.error }
+                ]}
+                onPress={handleSignOut}
+            >
+                <Text style={[styles.buttonText, { color: colors.text.primary }]}>{isGuest ? 'Sign Up / Sign In' : 'Sign Out'}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -180,12 +191,10 @@ export const ProfileScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.navy,
         padding: 20,
         paddingTop: 60,
     },
     title: {
-        color: COLORS.cyan,
         fontSize: 28,
         fontWeight: 'bold',
         marginBottom: 30,
@@ -195,27 +204,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 40,
         padding: 20,
-        backgroundColor: 'rgba(0, 240, 255, 0.05)',
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(0, 240, 255, 0.1)',
     },
     avatarContainer: {
         width: 70,
         height: 70,
         borderRadius: 35,
-        backgroundColor: 'rgba(0, 240, 255, 0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 20,
         borderWidth: 1,
-        borderColor: COLORS.cyan,
     },
     profileInfo: {
         flex: 1,
     },
     username: {
-        color: COLORS.white,
         fontSize: 20,
         fontWeight: 'bold',
     },
@@ -225,15 +229,12 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        color: COLORS.white,
         fontSize: 18,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.cyan,
         paddingVertical: 4,
         marginRight: 10,
     },
     email: {
-        color: COLORS.gray,
         fontSize: 14,
         marginTop: 4,
     },
@@ -244,43 +245,34 @@ const styles = StyleSheet.create({
     },
     statBox: {
         flex: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
         padding: 20,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
         alignItems: 'center',
     },
     statLabel: {
-        color: COLORS.gray,
         fontSize: 14,
         marginBottom: 5,
     },
     statValue: {
-        color: COLORS.white,
         fontSize: 24,
         fontWeight: 'bold',
     },
     button: {
-        backgroundColor: 'rgba(110, 44, 243, 0.2)',
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',
         marginBottom: 15,
         borderWidth: 1,
-        borderColor: COLORS.purple,
     },
     premiumButton: {
-        backgroundColor: COLORS.pink,
-        borderColor: COLORS.pink,
+        // Overrides in inline styles
     },
     signOutButton: {
         marginTop: 20,
         backgroundColor: 'transparent',
-        borderColor: 'rgba(255, 45, 171, 0.3)',
     },
     buttonText: {
-        color: COLORS.white,
         fontSize: 16,
         fontWeight: 'bold',
     },

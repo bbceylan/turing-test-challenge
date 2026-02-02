@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../store/useStore';
 import { Globe, Calendar, Lock } from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface Player {
     id: string;
@@ -14,16 +15,23 @@ interface Player {
 type Tab = 'GLOBAL' | 'WEEKLY';
 
 // Extracted & Memoized Item Component for Performance
-const LeaderboardItem = React.memo(({ item, index }: { item: Player; index: number }) => (
-    <View style={styles.row}>
-        <Text style={styles.rank}>#{index + 1}</Text>
-        <Text style={styles.name}>{item.username || 'Anonymous Agent'}</Text>
-        <Text style={styles.xp}>{item.total_xp} XP</Text>
-    </View>
+const LeaderboardItem = React.memo(({ item, index, colors }: { item: Player; index: number, colors: any }) => (
+    <Animated.View
+        entering={FadeInDown.delay(index * 50).springify()}
+        style={[styles.row, {
+            backgroundColor: colors.background.card,
+            borderColor: colors.border.default
+        }]}
+    >
+        <Text style={[styles.rank, { color: colors.text.accent }]}>#{index + 1}</Text>
+        <Text style={[styles.name, { color: colors.text.primary }]}>{item.username || 'Anonymous Agent'}</Text>
+        <Text style={[styles.xp, { color: colors.text.highlight }]}>{item.total_xp} XP</Text>
+    </Animated.View>
 ));
 
 export const LeaderboardScreen = () => {
     const { isGuest } = useStore();
+    const { colors } = useTheme();
     const [players, setPlayers] = useState<Player[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -68,20 +76,20 @@ export const LeaderboardScreen = () => {
     }, [fetchLeaderboard]);
 
     const renderTabs = () => (
-        <View style={styles.tabContainer}>
+        <View style={[styles.tabContainer, { backgroundColor: colors.background.secondary }]}>
             <TouchableOpacity
-                style={[styles.tab, activeTab === 'GLOBAL' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'GLOBAL' && { backgroundColor: colors.border.default }]}
                 onPress={() => setActiveTab('GLOBAL')}
             >
-                <Globe size={20} color={activeTab === 'GLOBAL' ? COLORS.white : COLORS.gray} />
-                <Text style={[styles.tabText, activeTab === 'GLOBAL' && styles.activeTabText]}>Global</Text>
+                <Globe size={20} color={activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary} />
+                <Text style={[styles.tabText, { color: activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary }]}>Global</Text>
             </TouchableOpacity>
             <TouchableOpacity
-                style={[styles.tab, activeTab === 'WEEKLY' && styles.activeTab]}
+                style={[styles.tab, activeTab === 'WEEKLY' && { backgroundColor: colors.border.default }]}
                 onPress={() => setActiveTab('WEEKLY')}
             >
-                <Calendar size={20} color={activeTab === 'WEEKLY' ? COLORS.white : COLORS.gray} />
-                <Text style={[styles.tabText, activeTab === 'WEEKLY' && styles.activeTabText]}>Weekly</Text>
+                <Calendar size={20} color={activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary} />
+                <Text style={[styles.tabText, { color: activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary }]}>Weekly</Text>
             </TouchableOpacity>
         </View>
     );
@@ -90,9 +98,9 @@ export const LeaderboardScreen = () => {
         if (isGuest) {
             return (
                 <View style={styles.center}>
-                    <Lock size={48} color={COLORS.gray} style={{ marginBottom: 16 }} />
-                    <Text style={styles.guestTitle}>Guest Mode Active</Text>
-                    <Text style={styles.guestText}>Sign in to compete with other agents.</Text>
+                    <Lock size={48} color={colors.text.secondary} style={{ marginBottom: 16 }} />
+                    <Text style={[styles.guestTitle, { color: colors.text.primary }]}>Guest Mode Active</Text>
+                    <Text style={[styles.guestText, { color: colors.text.secondary }]}>Sign in to compete with other agents.</Text>
                 </View>
             );
         }
@@ -100,7 +108,7 @@ export const LeaderboardScreen = () => {
         if (loading && !refreshing) {
             return (
                 <View style={styles.center}>
-                    <ActivityIndicator color={COLORS.cyan} size="large" />
+                    <ActivityIndicator color={colors.text.accent} size="large" />
                 </View>
             );
         }
@@ -108,9 +116,9 @@ export const LeaderboardScreen = () => {
         if (error) {
             return (
                 <View style={styles.center}>
-                    <Text style={styles.errorText}>{error}</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={fetchLeaderboard}>
-                        <Text style={styles.retryButtonText}>Retry Connection</Text>
+                    <Text style={[styles.errorText, { color: colors.feedback.error }]}>{error}</Text>
+                    <TouchableOpacity style={[styles.retryButton, { borderColor: colors.feedback.error, backgroundColor: colors.background.secondary }]} onPress={fetchLeaderboard}>
+                        <Text style={[styles.retryButtonText, { color: colors.feedback.error }]}>Retry Connection</Text>
                     </TouchableOpacity>
                 </View>
             );
@@ -121,15 +129,15 @@ export const LeaderboardScreen = () => {
                 data={players}
                 keyExtractor={(item) => item.id}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.pink} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text.accent} />
                 }
                 ListEmptyComponent={
                     <View style={styles.empty}>
-                        <Text style={styles.emptyText}>No rankings available yet.</Text>
-                        <Text style={styles.emptySubText}>Be the first to sync your XP!</Text>
+                        <Text style={[styles.emptyText, { color: colors.text.primary }]}>No rankings available yet.</Text>
+                        <Text style={[styles.emptySubText, { color: colors.text.secondary }]}>Be the first to sync your XP!</Text>
                     </View>
                 }
-                renderItem={({ item, index }) => <LeaderboardItem item={item} index={index} />}
+                renderItem={({ item, index }) => <LeaderboardItem item={item} index={index} colors={colors} />}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 initialNumToRender={10}
                 maxToRenderPerBatch={10}
@@ -139,8 +147,8 @@ export const LeaderboardScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Rankings</Text>
+        <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+            <Text style={[styles.title, { color: colors.text.accent }]}>Rankings</Text>
             {renderTabs()}
             {renderContent()}
         </View>
@@ -150,7 +158,6 @@ export const LeaderboardScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.navy,
         padding: 20,
         paddingTop: 60,
     },
@@ -161,7 +168,6 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     title: {
-        color: COLORS.pink,
         fontSize: 28,
         fontWeight: 'bold',
         marginBottom: 20,
@@ -169,7 +175,6 @@ const styles = StyleSheet.create({
     tabContainer: {
         flexDirection: 'row',
         marginBottom: 20,
-        backgroundColor: 'rgba(0,0,0,0.2)',
         borderRadius: 12,
         padding: 4,
     },
@@ -183,14 +188,12 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     activeTab: {
-        backgroundColor: COLORS.purple,
+        // Handled dynamically
     },
     tabText: {
-        color: COLORS.gray,
         fontWeight: '600',
     },
     activeTabText: {
-        color: COLORS.white,
         fontWeight: 'bold',
     },
     empty: {
@@ -198,12 +201,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        color: COLORS.white,
         fontSize: 18,
         fontWeight: 'bold',
     },
     emptySubText: {
-        color: COLORS.gray,
         fontSize: 14,
         marginTop: 8,
     },
@@ -211,54 +212,43 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: 'rgba(110, 44, 243, 0.1)',
         borderRadius: 12,
         marginBottom: 10,
         borderWidth: 1,
-        borderColor: 'rgba(110, 44, 243, 0.3)',
     },
     rank: {
-        color: COLORS.cyan,
         fontSize: 18,
         fontWeight: 'bold',
         width: 40,
     },
     name: {
-        color: COLORS.white,
         fontSize: 16,
         flex: 1,
     },
     xp: {
-        color: COLORS.pink,
         fontSize: 16,
         fontWeight: 'bold',
     },
     guestTitle: {
-        color: COLORS.white,
         fontSize: 20,
         fontWeight: 'bold',
         marginTop: 10,
     },
     guestText: {
-        color: COLORS.gray,
         marginTop: 8,
         textAlign: 'center',
     },
     errorText: {
-        color: COLORS.gray,
         textAlign: 'center',
         marginBottom: 20,
     },
     retryButton: {
         paddingVertical: 10,
         paddingHorizontal: 20,
-        backgroundColor: 'rgba(255, 45, 171, 0.2)',
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: COLORS.pink,
     },
     retryButtonText: {
-        color: COLORS.pink,
         fontWeight: 'bold',
     },
 });

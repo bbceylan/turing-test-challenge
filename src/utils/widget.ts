@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 
-const WIDGET_DATA_PATH = `${FileSystem.documentDirectory}widget_data.json`;
+const WIDGET_DATA_PATH = `${(FileSystem as any).documentDirectory}widget_data.json`;
 
 export const updateWidgetData = async (stats: { currentStreak: number, totalXp: number }) => {
     try {
