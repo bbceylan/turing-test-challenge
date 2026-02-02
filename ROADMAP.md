@@ -11,9 +11,9 @@
 - [x] Leaderboard: Global and weekly rankings (Guest Mode supported).
 - [x] Push Notifications: Daily challenges and streak reminders.
 
-## Phase 3: Monetization & Polish (In Progress)
-- [ ] Ads: Interstitial and banner ads (Requires App IDs).
-- [ ] RevenueCat: "Pro" subscription to remove ads (Requires API Keys).
+## Phase 3: Monetization & Polish (Completed)
+- [x] Ads: Interstitial and banner ads (Test IDs configured).
+- [x] RevenueCat: "Pro" subscription to remove ads (Pending real keys).
 - [x] Widgets: Streak and daily stats on home screen.
 
 ## Phase 4: Future Expansion

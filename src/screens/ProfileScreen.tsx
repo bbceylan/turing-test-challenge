@@ -78,6 +78,37 @@ export const ProfileScreen = () => {
         }
     };
 
+    const handlePurchase = async () => {
+        if (isGuest) {
+            Alert.alert('Guest Mode', 'Please sign in to upgrade to Pro.');
+            return;
+        }
+
+        try {
+            const { NativeModules } = require('react-native');
+            if (!NativeModules.RNPurchases) {
+                Alert.alert('Development Mode', 'In-App Purchases require a native build (not Expo Go).\n\nIf you are a developer, set `isPro: true` in the store manually.');
+                return;
+            }
+
+            const Purchases = require('react-native-purchases').default;
+
+            // For MVP/Demo: Just try to restore directly or confirm
+            // In a real app, you'd fetch offerings here.
+            try {
+                // const offerings = await Purchases.getOfferings();
+                // ... logic to show paywall
+                Alert.alert('Coming Soon', 'The Pro subscription is not yet configured in RevenueCat.');
+            } catch (e: any) {
+                Alert.alert('Store Error', e.message);
+            }
+
+        } catch (error) {
+            console.warn('Purchase flow failed:', error);
+            Alert.alert('Error', 'Could not initiate purchase flow.');
+        }
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Agent Profile</Text>
@@ -133,9 +164,11 @@ export const ProfileScreen = () => {
                 <Text style={styles.buttonText}>Invite Friends</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.button, styles.premiumButton]}>
-                <Text style={styles.buttonText}>Go Ad-Free</Text>
-            </TouchableOpacity>
+            {!useStore.getState().isPro && (
+                <TouchableOpacity style={[styles.button, styles.premiumButton]} onPress={handlePurchase}>
+                    <Text style={styles.buttonText}>Go Ad-Free</Text>
+                </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={[styles.button, styles.signOutButton]} onPress={handleSignOut}>
                 <Text style={styles.buttonText}>{isGuest ? 'Sign Up / Sign In' : 'Sign Out'}</Text>

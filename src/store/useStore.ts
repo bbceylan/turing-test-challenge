@@ -52,9 +52,14 @@ export const useStore = create<AppState>((set, get) => ({
             // Initialize RevenueCat
             const hasNativePurchases = !!NativeModules.RNPurchases;
             if (hasNativePurchases) {
-                const Purchases = require('react-native-purchases').default;
-                const apiKey = Platform.OS === 'ios' ? 'goog_EXAMPLE_REVENUECAT_ID' : 'goog_EXAMPLE_REVENUECAT_ID';
-                Purchases.configure({ apiKey });
+                try {
+                    const Purchases = require('react-native-purchases').default;
+                    const apiKey = Platform.OS === 'ios' ? 'goog_EXAMPLE_REVENUECAT_ID' : 'goog_EXAMPLE_REVENUECAT_ID';
+                    Purchases.configure({ apiKey });
+                    console.log('RevenueCat configured successfully');
+                } catch (e) {
+                    console.warn('RevenueCat setup failed (expected in Expo Go without dev client):', e);
+                }
             } else {
                 console.log('Expo Go or missing native module detected. RevenueCat disabled.');
             }
