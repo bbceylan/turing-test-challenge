@@ -29,6 +29,14 @@ export const SEMANTIC_COLORS = {
     feedback: {
         success: 'rgba(0, 240, 255, 0.2)',
         error: 'rgba(255, 45, 171, 0.2)',
+    },
+    brand: {
+        gpt: '#10A37F', // OpenAI Green
+        claude: '#D97757', // Anthropic Orange
+        gemini: '#1B6EF3', // Google Blue
+        llama: '#044CD0', // Meta Blue
+        grok: '#FFFFFF', // xAI White
+        mistral: '#F39F49', // Mistral Yellow/Orange
     }
 };
 

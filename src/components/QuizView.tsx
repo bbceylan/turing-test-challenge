@@ -40,6 +40,18 @@ const AnimatedScanline = () => {
     );
 };
 
+// Helper to map model string to brand color
+const getModelColor = (model: string, colors: any) => {
+    const m = model.toLowerCase();
+    if (m.includes('gpt')) return colors.brand.gpt;
+    if (m.includes('claude')) return colors.brand.claude;
+    if (m.includes('gemini')) return colors.brand.gemini;
+    if (m.includes('llama')) return colors.brand.llama;
+    if (m.includes('grok')) return colors.brand.grok;
+    if (m.includes('mistral')) return colors.brand.mistral;
+    return colors.text.accent; // Default fallback
+};
+
 export const QuizView = () => {
     const {
         currentPair,
@@ -152,7 +164,20 @@ export const QuizView = () => {
                 >
                     <View style={styles.modelReveal}>
                         <Text style={[styles.modelLabel, { color: colors.text.secondary }]}>AI Model:</Text>
-                        <Text style={[styles.modelName, { color: colors.text.accent }]}>{currentPair.aiModel}</Text>
+                        <View style={[
+                            styles.modelBadge,
+                            {
+                                borderColor: getModelColor(currentPair.aiModel, colors),
+                                backgroundColor: `${getModelColor(currentPair.aiModel, colors)}20` // 20% opacity
+                            }
+                        ]}>
+                            <Text style={[
+                                styles.modelName,
+                                { color: getModelColor(currentPair.aiModel, colors) }
+                            ]}>
+                                {currentPair.aiModel}
+                            </Text>
+                        </View>
                     </View>
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
@@ -289,9 +314,14 @@ const styles = StyleSheet.create({
         marginRight: 6,
     },
     modelName: {
-        color: COLORS.cyan,
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
+    },
+    modelBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
     },
     actionButtons: {
         flexDirection: 'row',

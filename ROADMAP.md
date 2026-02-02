@@ -35,6 +35,11 @@
 - [x] Apple Store Compliance: Privacy Manifest configured for UserDefaults/FileTimestamp.
 - [x] Release: Version bumped to 1.0.1. Ready for build.
 
-## Phase 11: Polish & Accessibility (In Progress)
-- [ ] Accessibility: Ensure screen reader support and dynamic type scaling.
-- [ ] Polish: Improve loading states and error recovery UX.
+## Phase 11: Polish & Accessibility (Completed)
+- [x] Accessibility: Ensure screen reader support and dynamic type scaling.
+- [x] Polish: Improve loading states and error recovery UX.
+
+## Phase 12: Content Enrichment (In Progress)
+- [ ] Data Model: Add `aiModel` and `difficulty` to TextPairs.
+- [ ] UI: Display "AI Personality" (e.g., GPT-4, Claude) after reveal.
+- [ ] Content: Expand mock dataset with more distinct examples.
