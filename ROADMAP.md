@@ -8,7 +8,7 @@
 
 ## Phase 2: Competition & Social (In Progress)
 - [x] Accounts: Supabase Auth integration (Guest Mode supported).
-- [ ] Leaderboard: Global and weekly rankings (Requires Supabase setup).
+- [x] Leaderboard: Global and weekly rankings (Guest Mode supported).
 - [x] Push Notifications: Daily challenges and streak reminders.
 
 ## Phase 3: Monetization & Polish (In Progress)

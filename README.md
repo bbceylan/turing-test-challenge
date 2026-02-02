@@ -5,7 +5,7 @@ A mindful challenge to distinguish between human creativity and AI-generated tex
 ## Features
 - **The Challenge**: Compare two texts and guess which is human-written.
 - **Ritual XP**: Earn points and maintain streaks for correct guesses.
-- **Leaderboards**: Compete globally via Supabase-powered leaderboards.
+- **Leaderboards**: Compete globally or weekly via Supabase-powered leaderboards.
 - **Offline-First**: Practice and play offline; sync when you're back.
 - **Guest Mode**: Play immediately without signing up. Create an account later to sync stats.
 - **Premium Experience**: Ad-supported with a clean "AI Slop" / Synthwave aesthetic. Subscription for ad-free play.
