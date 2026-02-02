@@ -1,62 +1,70 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { LeaderboardScreen } from '../LeaderboardScreen';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../utils/supabase';
 
 describe('LeaderboardScreen', () => {
+    const mockData = [{ id: '1', username: 'Test Agent', total_xp: 1000 }];
+    const createMockChain = () => ({
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({ data: mockData, error: null }),
+    });
+
     beforeEach(() => {
         useStore.setState({ isGuest: false });
         jest.clearAllMocks();
+        // Default mock for all tests
+        (supabase.from as jest.Mock).mockReturnValue(createMockChain());
     });
 
-    it('renders guest banner when in guest mode', () => {
+    it('renders guest banner when in guest mode', async () => {
         useStore.setState({ isGuest: true });
+
         const { getByText } = render(<LeaderboardScreen />);
 
-        expect(getByText('Guest Mode Active')).toBeTruthy();
+        await waitFor(() => {
+            expect(getByText('Guest Mode Active')).toBeTruthy();
+        });
     });
 
     it('renders tabs and fetches data in normal mode', async () => {
-        // Mock successful data fetch
-        const mockData = [{ id: '1', username: 'Test Agent', total_xp: 1000 }];
-        const mockChain = {
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: mockData, error: null }),
-        };
-        // Ensure chaining works by explicitly returning reference if needed, 
-        // though mockReturnThis should work on object methods.
-        mockChain.select.mockReturnValue(mockChain);
-        mockChain.order.mockReturnValue(mockChain);
-
-        (supabase.from as jest.Mock).mockReturnValue(mockChain);
-
         const { getByText } = render(<LeaderboardScreen />);
 
+        // Verify static UI
         expect(getByText('Rankings')).toBeTruthy();
         expect(getByText('Global')).toBeTruthy();
         expect(getByText('Weekly')).toBeTruthy();
 
-        // Verify Supabase was called
+        // Wait for data to load and render
         await waitFor(() => {
             expect(supabase.from).toHaveBeenCalledWith('profiles');
         });
 
-        // Wait for data to render to avoid act() warnings
         await waitFor(() => {
             expect(getByText('#1')).toBeTruthy();
+            expect(getByText('Test Agent')).toBeTruthy();
         });
     });
 
-    it('switches tabs', () => {
+    it('switches tabs and refetches data', async () => {
         const { getByText } = render(<LeaderboardScreen />);
-        const weeklyTab = getByText('Weekly');
 
-        fireEvent.press(weeklyTab);
+        // Wait for initial load
+        await waitFor(() => {
+            expect(getByText('#1')).toBeTruthy();
+        });
 
-        // You would typically verify visual feedback or state change here,
-        // but since we mock the implementation logic, we verify the UI exists.
-        expect(weeklyTab).toBeTruthy();
+        // Switch to Weekly tab
+        await act(async () => {
+            fireEvent.press(getByText('Weekly'));
+        });
+
+        // Verify the tab switch triggers a new fetch
+        await waitFor(() => {
+            expect(supabase.from).toHaveBeenCalledTimes(2);
+        });
     });
 });
+
