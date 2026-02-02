@@ -12,6 +12,8 @@ interface State {
   error: Error | null;
 }
 
+import { scrubSensitiveData } from '../utils/scrubber';
+
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -23,9 +25,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    const safeError = scrubSensitiveData(error);
+    const safeInfo = scrubSensitiveData(errorInfo);
+
     if (__DEV__) {
-      console.error('ErrorBoundary caught:', error, errorInfo);
+      console.error('ErrorBoundary caught (Scrubbed):', safeError, safeInfo);
     }
+
+    // In production, you would send 'safeError' and 'safeInfo' to your crash reporter here.
   }
 
   handleRetry = (): void => {
