@@ -15,11 +15,13 @@ interface AppState {
     stats: UserStats;
     isLoading: boolean;
     isPro: boolean;
+    isGuest: boolean;
     user: User | null;
     session: Session | null;
     loadStats: () => Promise<void>;
     addXp: (xp: number, correct: boolean) => Promise<void>;
     setSession: (session: Session | null) => void;
+    setGuest: (isGuest: boolean) => void;
     syncStatsToRemote: () => Promise<void>;
     setIsPro: (isPro: boolean) => void;
 }
@@ -34,13 +36,16 @@ export const useStore = create<AppState>((set, get) => ({
     },
     isLoading: true,
     isPro: false,
+    isGuest: false,
     user: null,
     session: null,
 
     setIsPro: (isPro) => set({ isPro }),
 
+    setGuest: (isGuest) => set({ isGuest }),
+
     setSession: (session) => {
-        set({ session, user: session?.user ?? null });
+        set({ session, user: session?.user ?? null, isGuest: false }); // Reset guest if session exists
         if (session) {
             get().syncStatsToRemote();
 
@@ -72,8 +77,8 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     syncStatsToRemote: async () => {
-        const { session, stats } = get();
-        if (!session?.user) return;
+        const { session, stats, isGuest } = get();
+        if (!session?.user || isGuest) return;
 
         try {
             const { error } = await supabase
@@ -92,7 +97,7 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     addXp: async (xp: number, correct: boolean) => {
-        const { stats, syncStatsToRemote, session } = get();
+        const { stats, syncStatsToRemote, session, isGuest } = get();
         const db = await getDb();
 
         const newXp = stats.totalXp + (correct ? xp : 0);
@@ -127,7 +132,7 @@ export const useStore = create<AppState>((set, get) => ({
 
         updateWidgetData({ currentStreak: newStreak, totalXp: newXp });
 
-        if (session) {
+        if (session && !isGuest) {
             await syncStatsToRemote();
         }
     },

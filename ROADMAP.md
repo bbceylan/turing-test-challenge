@@ -6,17 +6,27 @@
 - [x] Local Storage: SQLite integration for offline play.
 - [x] Initial Design: Synthwave (Purple/Pink/Navy) theme.
 
-## Phase 2: Competition & Social (Completed)
-- [x] Accounts: Supabase Auth integration.
-- [x] Leaderboard: Global and weekly rankings.
+## Phase 2: Competition & Social (In Progress)
+- [x] Accounts: Supabase Auth integration (Guest Mode supported).
+- [ ] Leaderboard: Global and weekly rankings (Requires Supabase setup).
 - [x] Push Notifications: Daily challenges and streak reminders.
 
-## Phase 3: Monetization & Polish (Completed)
-- [x] Ads: Interstitial and banner ads.
-- [x] RevenueCat: "Pro" subscription to remove ads.
+## Phase 3: Monetization & Polish (In Progress)
+- [ ] Ads: Interstitial and banner ads (Requires App IDs).
+- [ ] RevenueCat: "Pro" subscription to remove ads (Requires API Keys).
 - [x] Widgets: Streak and daily stats on home screen.
 
-## Phase 4: Future Expansion (Completed)
-- [x] Tournaments: Real-time or asynchronous competitions (Plan & Schema).
-- [x] Invite Friends: Challenge specific users to a Turing duel.
-- [x] AI Models: Categorize texts by the AI model used (GPT-4 vs Human, Claude vs Human, etc.).
+## Phase 4: Future Expansion
+- [ ] Tournaments: Real-time or asynchronous competitions.
+- [ ] Invite Friends: Challenge specific users to a Turing duel.
+- [ ] AI Models: Categorize texts by the AI model used.
+
+## Phase 5: Privacy & Safety (New)
+- [ ] Data Scrubbing: Ensure no journal content ever leaves device.
+- [ ] Crash Reporting: Mask sensitive strings in logs.
+- [ ] Local Encryption: Encrypt SQLite database at rest (Optional post-MVP).
+
+## Phase 6: Production & Hardening (Pending)
+- [ ] Configuration: Set up real Prod environment variables (Supabase, AdMob).
+- [ ] Apple Store Compliance: Privacy Policy URL, specialized metadata.
+- [ ] Release: Build submissions for iOS and Android.

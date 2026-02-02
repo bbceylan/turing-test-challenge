@@ -3,10 +3,14 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'reac
 import { supabase } from '../utils/supabase';
 import { COLORS } from '../constants/theme';
 
+import { useStore } from '../store/useStore';
+
 export const AuthScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const { setGuest } = useStore();
 
     async function signInWithEmail() {
         setLoading(true);
@@ -75,6 +79,14 @@ export const AuthScreen = () => {
                 >
                     <Text style={styles.buttonText}>Sign Up</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.button, styles.ghostButton]}
+                    disabled={loading}
+                    onPress={() => setGuest(true)}
+                >
+                    <Text style={[styles.buttonText, styles.ghostText]}>Continue as Guest</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -127,9 +139,18 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: COLORS.pink,
     },
+    ghostButton: {
+        backgroundColor: 'transparent',
+        marginTop: 10,
+    },
     buttonText: {
         color: COLORS.white,
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    ghostText: {
+        color: COLORS.gray,
+        fontSize: 16,
+        fontWeight: 'normal',
     },
 });

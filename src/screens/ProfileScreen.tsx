@@ -6,16 +6,18 @@ import { supabase } from '../utils/supabase';
 import { User, Edit3, Check, X, Share2 } from 'lucide-react-native';
 
 export const ProfileScreen = () => {
-    const { stats, session, user } = useStore();
+    const { stats, session, user, isGuest, setGuest } = useStore();
     const [isEditing, setIsEditing] = useState(false);
     const [username, setUsername] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (user) {
+        if (user && !isGuest) {
             fetchProfile();
+        } else if (isGuest) {
+            setUsername('Guest Agent');
         }
-    }, [user]);
+    }, [user, isGuest]);
 
     const fetchProfile = async () => {
         try {
@@ -33,6 +35,10 @@ export const ProfileScreen = () => {
     };
 
     const handleUpdateUsername = async () => {
+        if (isGuest) {
+            Alert.alert('Guest Mode', 'Sign in to save your agent name!');
+            return;
+        }
         if (!username.trim()) return;
         setLoading(true);
         try {
@@ -55,7 +61,11 @@ export const ProfileScreen = () => {
     };
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        if (isGuest) {
+            setGuest(false); // Return to Auth Screen
+        } else {
+            await supabase.auth.signOut();
+        }
     };
 
     const handleInvite = async () => {
@@ -95,12 +105,12 @@ export const ProfileScreen = () => {
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <TouchableOpacity style={styles.editRow} onPress={() => setIsEditing(true)}>
+                        <TouchableOpacity style={styles.editRow} onPress={() => !isGuest && setIsEditing(true)}>
                             <Text style={styles.username}>{username || 'Click to set name'}</Text>
-                            <Edit3 color={COLORS.gray} size={16} style={{ marginLeft: 8 }} />
+                            {!isGuest && <Edit3 color={COLORS.gray} size={16} style={{ marginLeft: 8 }} />}
                         </TouchableOpacity>
                     )}
-                    <Text style={styles.email}>{session?.user.email}</Text>
+                    <Text style={styles.email}>{isGuest ? 'Offline Mode' : session?.user.email}</Text>
                 </View>
             </View>
 
@@ -128,7 +138,7 @@ export const ProfileScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.button, styles.signOutButton]} onPress={handleSignOut}>
-                <Text style={styles.buttonText}>Sign Out</Text>
+                <Text style={styles.buttonText}>{isGuest ? 'Sign Up / Sign In' : 'Sign Out'}</Text>
             </TouchableOpacity>
         </View>
     );
