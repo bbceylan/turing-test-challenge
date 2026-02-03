@@ -51,10 +51,21 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+          "androidAppId": "ca-app-pub-xxxxxxxxxxxxxxxx~android",
+          "iosAppId": "ca-app-pub-xxxxxxxxxxxxxxxx~ios"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "admob": {
+        "banner": "ca-app-pub-xxxxxxxxxxxxxxxx/banner",
+        "interstitial": "ca-app-pub-xxxxxxxxxxxxxxxx/interstitial",
+        "rewarded": "ca-app-pub-xxxxxxxxxxxxxxxx/rewarded"
+      },
+      "revenuecat": {
+        "ios": "appl_xxxxxxxxxxxxx",
+        "android": "goog_xxxxxxxxxxxxx"
+      }
+    }
   }
 }

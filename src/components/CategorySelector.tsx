@@ -2,6 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
 import { getCategories } from '../utils/mockData';
+import { THEME_PACKS } from '../utils/themePacks';
 import { BookOpen, Brain, FlaskConical, Ghost, Monitor, Scroll, Sparkles } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import Animated, {
@@ -17,6 +18,9 @@ import Animated, {
 
 interface CategorySelectorProps {
     onSelect: (category: string) => void;
+    onSelectDaily?: () => void;
+    onSelectPack?: (packId: string) => void;
+    onSelectGhost?: () => void;
 }
 
 // Miami/Cyberpunk category colors - all unique
@@ -117,9 +121,10 @@ const AnimatedScanline = () => {
     return <Animated.View style={[styles.scanlineEffect, animatedStyle]} />;
 };
 
-export const CategorySelector: React.FC<CategorySelectorProps> = ({ onSelect }) => {
+export const CategorySelector: React.FC<CategorySelectorProps> = ({ onSelect, onSelectDaily, onSelectPack, onSelectGhost }) => {
     const { colors } = useTheme();
     const categories = useMemo(() => getCategories(), []);
+    const packs = useMemo(() => THEME_PACKS, []);
 
     // Flicker effect for title
     const titleOpacity = useSharedValue(1);
@@ -166,7 +171,58 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({ onSelect }) 
             </Animated.View>
 
             <Animated.Text style={[styles.title, titleFlicker]}>SELECT MISSION</Animated.Text>
+
+            {onSelectDaily && (
+                <TouchableOpacity
+                    style={[styles.dailyCard, { borderColor: COLORS.neonCyan, backgroundColor: 'rgba(0, 240, 255, 0.08)' }]}
+                    onPress={onSelectDaily}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Start Daily Ritual"
+                >
+                    <View style={styles.dailyCardInner}>
+                        <Text style={styles.dailyLabel}>DAILY RITUAL</Text>
+                        <Text style={styles.dailySubLabel}>One shot. Bonus XP.</Text>
+                    </View>
+                </TouchableOpacity>
+            )}
+
+            {onSelectGhost && (
+                <TouchableOpacity
+                    style={[styles.dailyCard, { borderColor: COLORS.neonPink, backgroundColor: 'rgba(255, 45, 171, 0.08)' }]}
+                    onPress={onSelectGhost}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Start Ghost Run"
+                >
+                    <View style={styles.dailyCardInner}>
+                        <Text style={[styles.dailyLabel, { color: COLORS.neonPink }]}>GHOST RUN</Text>
+                        <Text style={styles.dailySubLabel}>10 rounds. Beat your best.</Text>
+                    </View>
+                </TouchableOpacity>
+            )}
+
+            {onSelectPack && (
+                <View style={styles.packGrid}>
+                    <Text style={styles.sectionLabel}>THEME PACKS</Text>
+                    {packs.map((pack: any) => (
+                        <TouchableOpacity
+                            key={pack.id}
+                            style={[styles.packCard, { borderColor: COLORS.purple }]}
+                            onPress={() => onSelectPack(pack.id)}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Select ${pack.title} pack`}
+                        >
+                            <Text style={styles.packTitle}>{pack.title}</Text>
+                            <Text style={styles.packSubtitle}>{pack.subtitle}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+
             <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+                <Text style={styles.sectionLabel}>CATEGORIES</Text>
                 {categories.map((category, index) => (
                     <AnimatedCategoryCard
                         key={category}
@@ -298,6 +354,61 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         paddingBottom: 120,
+        gap: 2,
+    },
+    packGrid: {
+        marginBottom: 16,
+        gap: 10,
+    },
+    sectionLabel: {
+        color: COLORS.gray,
+        fontSize: 11,
+        letterSpacing: 3,
+        textTransform: 'uppercase',
+        marginBottom: 6,
+    },
+    packCard: {
+        borderWidth: 1,
+        borderRadius: 14,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        backgroundColor: 'rgba(110, 44, 243, 0.1)',
+    },
+    packTitle: {
+        color: COLORS.white,
+        fontSize: 14,
+        fontWeight: '800',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+    },
+    packSubtitle: {
+        color: COLORS.gray,
+        fontSize: 11,
+        marginTop: 4,
+    },
+    dailyCard: {
+        borderWidth: 2,
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 18,
+    },
+    dailyCardInner: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 6,
+    },
+    dailyLabel: {
+        color: COLORS.neonCyan,
+        fontSize: 14,
+        fontWeight: '800',
+        letterSpacing: 4,
+        textTransform: 'uppercase',
+    },
+    dailySubLabel: {
+        color: COLORS.gray,
+        fontSize: 12,
+        marginTop: 6,
+        letterSpacing: 0.5,
     },
     cardWrapper: {
         width: '48%',

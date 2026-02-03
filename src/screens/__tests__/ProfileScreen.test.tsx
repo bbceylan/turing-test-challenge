@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { ProfileScreen } from '../ProfileScreen';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../hooks/useTheme';
@@ -34,6 +34,7 @@ jest.mock('lucide-react-native', () => ({
 }));
 
 describe('ProfileScreen', () => {
+    const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
     const mockUseStore = useStore as unknown as jest.Mock;
     const mockUseTheme = useTheme as unknown as jest.Mock;
 
@@ -50,7 +51,7 @@ describe('ProfileScreen', () => {
         });
     });
 
-    it('renders correctly in Guest Mode', () => {
+    it('renders correctly in Guest Mode', async () => {
         mockUseStore.mockReturnValue({
             isGuest: true,
             stats: mockStats,
@@ -61,6 +62,9 @@ describe('ProfileScreen', () => {
         });
 
         const { getByText } = render(<ProfileScreen />);
+        await act(async () => {
+            await flushPromises();
+        });
 
         expect(getByText('Agent Profile')).toBeTruthy();
         expect(getByText('Guest Agent')).toBeTruthy();
@@ -78,6 +82,9 @@ describe('ProfileScreen', () => {
         });
 
         const { getByText } = render(<ProfileScreen />);
+        await act(async () => {
+            await flushPromises();
+        });
 
         expect(getByText('Agent Profile')).toBeTruthy();
         expect(getByText('test@example.com')).toBeTruthy();
@@ -87,7 +94,7 @@ describe('ProfileScreen', () => {
         });
     });
 
-    it('hides "Go Ad-Free" button if user is Pro', () => {
+    it('hides "Go Ad-Free" button if user is Pro', async () => {
         mockUseStore.mockReturnValue({
             isGuest: false,
             stats: mockStats,
@@ -97,10 +104,13 @@ describe('ProfileScreen', () => {
         });
 
         const { queryByText } = render(<ProfileScreen />);
+        await act(async () => {
+            await flushPromises();
+        });
         expect(queryByText('Go Ad-Free')).toBeNull();
     });
 
-    it('shows "Go Ad-Free" button if user is NOT Pro', () => {
+    it('shows "Go Ad-Free" button if user is NOT Pro', async () => {
         mockUseStore.mockReturnValue({
             isGuest: false,
             stats: mockStats,
@@ -110,6 +120,9 @@ describe('ProfileScreen', () => {
         });
 
         const { getByText } = render(<ProfileScreen />);
+        await act(async () => {
+            await flushPromises();
+        });
         expect(getByText('Go Ad-Free')).toBeTruthy();
     });
 });

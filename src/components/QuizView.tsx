@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Modal } from 'react-native';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
-import { getRandomPair, TextPair } from '../utils/mockData';
 import { useStore } from '../store/useStore';
 import { useGameLogic } from '../hooks/useGameLogic';
 import * as Haptics from 'expo-haptics';
 import { showInterstitialIfReady } from '../utils/ads';
+import { loadRewarded, showRewardedIfReady } from '../utils/ads';
 import { Share } from 'react-native';
 import { Share2, ArrowLeft } from 'lucide-react-native';
 import Animated, {
@@ -18,6 +18,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '../hooks/useTheme';
 import { GameOverModal } from './GameOverModal';
+import { useNavigation } from '@react-navigation/native';
+import { getHintForCategory } from '../utils/hints';
 
 // ... (AnimatedScanline is here, skipping)
 
@@ -55,11 +57,15 @@ const getModelColor = (model: string, colors: any) => {
 
 interface QuizViewProps {
     category?: string;
+    categories?: string[];
     onBack?: () => void;
     onNavigateToLeaderboard?: () => void;
+    mode?: 'STANDARD' | 'DAILY' | 'GHOST' | 'PACK';
+    roundLimit?: number;
+    ghostTarget?: number;
 }
 
-export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigateToLeaderboard }) => {
+export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack, onNavigateToLeaderboard, mode = 'STANDARD', roundLimit, ghostTarget }) => {
     const {
         currentPair,
         options,
@@ -74,9 +80,18 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigate
         isNewRecord,
         resetGame,
         maxStreak,
-    } = useGameLogic(category);
-    const { stats } = useStore();
+        dailyStatus,
+        loadingDaily,
+        pendingShield,
+        useShield,
+        declineShield,
+        roundsPlayed,
+        ghostCorrect,
+    } = useGameLogic(category, mode, categories, roundLimit);
+    const { stats, isGuest, setGuest, isPro, adFreeUntil } = useStore();
     const { colors } = useTheme();
+    const navigation = useNavigation();
+    const [hint, setHint] = useState<string>('');
 
     const cardOpacity = useSharedValue(0);
     const cardTranslateY = useSharedValue(50);
@@ -87,6 +102,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigate
             cardTranslateY.value = 50;
             cardOpacity.value = withTiming(1, { duration: 500 });
             cardTranslateY.value = withTiming(0, { duration: 500, easing: Easing.out(Easing.back(1.5)) });
+            setHint(getHintForCategory(currentPair.category));
         }
     }, [currentPair]);
 
@@ -133,18 +149,34 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigate
         }
     };
 
+    const handleGoPro = () => {
+        // Navigate to Profile tab for purchase
+        // @ts-ignore - navigation typing varies per app
+        navigation.navigate('Profile');
+    };
+
+    const handleWatchAd = () => {
+        const shown = showRewardedIfReady();
+        if (!shown) {
+            loadRewarded();
+        }
+    };
+
     if (!currentPair) return null;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
             <GameOverModal
                 visible={gameOver}
-                sessionStreak={streakBeforeGameOver}
-                maxStreak={maxStreak}
+                sessionStreak={mode === 'GHOST' ? ghostCorrect : streakBeforeGameOver}
+                maxStreak={mode === 'GHOST' ? stats.ghostBestScore : maxStreak}
                 sessionXp={sessionXp}
-                isNewRecord={isNewRecord || streakBeforeGameOver === maxStreak}
+                isNewRecord={mode === 'GHOST' ? ghostCorrect >= stats.ghostBestScore : (isNewRecord || streakBeforeGameOver === maxStreak)}
                 onTryAgain={handleTryAgain}
                 onViewLeaderboard={handleViewLeaderboard}
+                showUpsell={!isPro && (!adFreeUntil || adFreeUntil <= Date.now()) && (mode === 'GHOST' ? ghostCorrect >= (stats.ghostBestScore || 0) : (isNewRecord || streakBeforeGameOver >= 7 || sessionXp >= 50))}
+                onGoPro={handleGoPro}
+                onWatchAd={handleWatchAd}
             />
             <AnimatedScanline />
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
@@ -155,14 +187,50 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigate
                                 <ArrowLeft color={colors.text.accent} size={24} />
                             </TouchableOpacity>
                         )}
-                        <Text style={[styles.category, { color: colors.text.accent }]}>{currentPair.category}</Text>
+                        <Text style={[styles.category, { color: colors.text.accent }]}>
+                            {mode === 'DAILY' ? 'Daily Ritual' : currentPair.category}
+                        </Text>
                     </View>
                     <Text style={[
                         styles.streak,
                         { color: colors.text.highlight },
                         stats.currentStreak >= 5 && NEON_SHADOWS.pink
-                    ]}>Streak: {stats.currentStreak}</Text>
+                    ]}>
+                        {mode === 'DAILY' ? `Daily Streak: ${stats.dailyStreak}` : `Streak: ${stats.currentStreak}`}
+                    </Text>
                 </View>
+                <View style={styles.metaRow}>
+                    <Text style={[styles.metaText, { color: colors.text.secondary }]}>Shields: {stats.streakShields}</Text>
+                    {mode === 'GHOST' && roundLimit && (
+                        <Text style={[styles.metaText, { color: colors.text.secondary }]}>
+                            Round {Math.min(roundsPlayed + 1, roundLimit)}/{roundLimit} • Ghost {ghostTarget ?? 0}
+                        </Text>
+                    )}
+                </View>
+
+                {mode === 'DAILY' && (
+                    <View style={[styles.dailyBanner, { borderColor: colors.border.default, backgroundColor: colors.background.secondary }]}>
+                        <Text style={[styles.dailyBannerText, { color: colors.text.primary }]}>
+                            {dailyStatus?.completed ? 'Daily ritual complete. Come back tomorrow.' : 'One shot. Bonus XP on a correct guess.'}
+                        </Text>
+                    </View>
+                )}
+
+                {isGuest && (stats.currentStreak >= 3 || stats.totalXp >= 50) && (
+                    <View style={[styles.authBanner, { borderColor: colors.border.default, backgroundColor: colors.background.secondary }]}>
+                        <Text style={[styles.authBannerText, { color: colors.text.primary }]}>
+                            Save your streak and sync across devices.
+                        </Text>
+                        <TouchableOpacity
+                            style={[styles.authBannerButton, { borderColor: colors.text.highlight }]}
+                            onPress={() => setGuest(false)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Sign in to sync"
+                        >
+                            <Text style={[styles.authBannerButtonText, { color: colors.text.primary }]}>Sign In</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <Text style={styles.prompt}>Which one is {currentPair.aiModel}?</Text>
 
@@ -199,7 +267,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigate
                             <TouchableOpacity
                                 style={cardStyle}
                                 onPress={() => !revealed && handleGuess(index)}
-                                disabled={revealed}
+                                disabled={revealed || (mode === 'DAILY' && dailyStatus?.completed)}
                                 activeOpacity={0.8}
                             >
                                 <Text style={styles.text}>{option.text}</Text>
@@ -225,6 +293,14 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigate
                         <Text style={styles.modelLabel}>Model used:</Text>
                         <Text style={[styles.modelName, { color: colors.text.primary }]}>{currentPair.aiModel}</Text>
                     </View>
+                    {hint ? (
+                        <Text style={[styles.hintText, { color: colors.text.secondary }]}>Hint: {hint}</Text>
+                    ) : null}
+                    {mode === 'GHOST' && roundLimit && (
+                        <Text style={[styles.ghostHint, { color: colors.text.secondary }]}>
+                            Ghost target: {ghostTarget ?? 0} correct • Your score: {ghostCorrect}
+                        </Text>
+                    )}
 
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
@@ -236,18 +312,47 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigate
                             <Share2 size={24} color={colors.text.primary} />
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.nextButton}
-                            onPress={nextQuestion}
-                            accessibilityRole="button"
-                            accessibilityLabel="Next Question"
-                            accessibilityHint="Proceed to the next round"
-                        >
-                            <Text style={[styles.nextButtonText, { color: colors.text.primary }]}>Next Round</Text>
-                        </TouchableOpacity>
+                        {mode === 'DAILY' ? (
+                            <TouchableOpacity
+                                style={styles.nextButton}
+                                onPress={onBack}
+                                accessibilityRole="button"
+                                accessibilityLabel="Back to Missions"
+                                accessibilityHint="Return to category selection"
+                            >
+                                <Text style={[styles.nextButtonText, { color: colors.text.primary }]}>Back to Missions</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.nextButton}
+                                onPress={nextQuestion}
+                                accessibilityRole="button"
+                                accessibilityLabel="Next Question"
+                                accessibilityHint="Proceed to the next round"
+                            >
+                                <Text style={[styles.nextButtonText, { color: colors.text.primary }]}>Next Round</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </Animated.View>
             )}
+
+            <Modal visible={pendingShield} transparent animationType="fade">
+                <View style={styles.shieldOverlay}>
+                    <View style={[styles.shieldModal, { backgroundColor: colors.background.primary }]}>
+                        <Text style={styles.shieldTitle}>Shield Protocol</Text>
+                        <Text style={styles.shieldSub}>Spend 1 shield to keep your streak alive?</Text>
+                        <View style={styles.shieldButtons}>
+                            <TouchableOpacity style={[styles.shieldButton, styles.shieldPrimary]} onPress={useShield}>
+                                <Text style={styles.shieldPrimaryText}>Use Shield</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.shieldButton, styles.shieldSecondary]} onPress={declineShield}>
+                                <Text style={styles.shieldSecondaryText}>End Run</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -285,6 +390,16 @@ const styles = StyleSheet.create({
         marginBottom: 40, // Increased spacing from content
         marginTop: 60, // Status bar clearance
     },
+    metaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+        marginTop: -20,
+    },
+    metaText: {
+        fontSize: 12,
+        letterSpacing: 0.4,
+    },
     category: {
         color: COLORS.cyan,
         fontSize: 16,
@@ -301,6 +416,49 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         textAlign: 'center',
         marginBottom: 30,
+    },
+    dailyBanner: {
+        borderWidth: 1,
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 18,
+        alignSelf: 'center',
+    },
+    dailyBannerText: {
+        fontSize: 12,
+        textAlign: 'center',
+        letterSpacing: 0.3,
+    },
+    authBanner: {
+        borderWidth: 1,
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        marginBottom: 18,
+        alignSelf: 'center',
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+    },
+    authBannerText: {
+        fontSize: 12,
+        flex: 1,
+        letterSpacing: 0.2,
+    },
+    authBannerButton: {
+        borderWidth: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255, 45, 171, 0.15)',
+    },
+    authBannerButtonText: {
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.3,
     },
     content: {
         gap: 30, // Increased gap
@@ -380,6 +538,18 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+    ghostHint: {
+        fontSize: 12,
+        textAlign: 'center',
+        marginBottom: 10,
+        letterSpacing: 0.2,
+    },
+    hintText: {
+        fontSize: 12,
+        textAlign: 'center',
+        marginBottom: 12,
+        letterSpacing: 0.2,
+    },
     labelContainer: {
         marginTop: 15,
         alignItems: 'center',
@@ -416,5 +586,64 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: COLORS.pink,
+    },
+    shieldOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(10, 14, 41, 0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    shieldModal: {
+        width: '100%',
+        maxWidth: 340,
+        borderRadius: 18,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: COLORS.neonCyan,
+        ...NEON_SHADOWS.cyan,
+    },
+    shieldTitle: {
+        color: COLORS.neonCyan,
+        fontSize: 18,
+        fontWeight: '800',
+        textAlign: 'center',
+        marginBottom: 8,
+        letterSpacing: 1,
+    },
+    shieldSub: {
+        color: COLORS.gray,
+        fontSize: 12,
+        textAlign: 'center',
+        marginBottom: 14,
+    },
+    shieldButtons: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    shieldButton: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 10,
+        alignItems: 'center',
+        borderWidth: 1,
+    },
+    shieldPrimary: {
+        backgroundColor: COLORS.neonCyan,
+        borderColor: COLORS.neonCyan,
+    },
+    shieldPrimaryText: {
+        color: COLORS.navy,
+        fontWeight: '800',
+        fontSize: 12,
+    },
+    shieldSecondary: {
+        backgroundColor: 'transparent',
+        borderColor: COLORS.neonPink,
+    },
+    shieldSecondaryText: {
+        color: COLORS.neonPink,
+        fontWeight: '700',
+        fontSize: 12,
     }
 });

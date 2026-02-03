@@ -1,17 +1,24 @@
-import { InterstitialAd, AdEventType, TestIds } from './ads_safe';
+import { InterstitialAd, AdEventType, TestIds, RewardedAd, RewardedAdEventType } from './ads_safe';
 import { useStore } from '../store/useStore';
 import Constants from 'expo-constants';
 
-const adUnitId = (__DEV__ && TestIds) ? TestIds.INTERSTITIAL : 'YOUR_REAL_AD_UNIT_ID';
+const adConfig = (Constants.expoConfig as any)?.extra?.admob || {};
+const adUnitId = (__DEV__ && TestIds) ? TestIds.INTERSTITIAL : (adConfig.interstitial || 'YOUR_REAL_AD_UNIT_ID');
+const rewardedAdUnitId = (__DEV__ && TestIds) ? TestIds.REWARDED : (adConfig.rewarded || 'YOUR_REAL_REWARDED_AD_UNIT_ID');
 
 let interstitial: any = null;
+let rewarded: any = null;
 let guessCount = 0;
 let lastAdTime = Date.now(); // Track time for ad frequency
 
+const isAdFreeActive = () => {
+    const { isPro, adFreeUntil } = useStore.getState();
+    return isPro || (!!adFreeUntil && adFreeUntil > Date.now());
+};
+
 export const loadInterstitial = () => {
     if (Constants.appOwnership === 'expo' || !InterstitialAd) return;
-    const { isPro } = useStore.getState();
-    if (isPro) return;
+    if (isAdFreeActive()) return;
 
     interstitial = InterstitialAd.createForAdRequest(adUnitId, {
         requestNonPersonalizedAdsOnly: true,
@@ -25,8 +32,7 @@ export const loadInterstitial = () => {
 };
 
 export const showInterstitialIfReady = () => {
-    const { isPro } = useStore.getState();
-    if (isPro || Constants.appOwnership === 'expo' || !interstitial) return;
+    if (isAdFreeActive() || Constants.appOwnership === 'expo' || !interstitial) return;
 
     guessCount++;
     const now = Date.now();
@@ -41,4 +47,33 @@ export const showInterstitialIfReady = () => {
         guessCount = 0;
         lastAdTime = Date.now();
     }
+};
+
+export const loadRewarded = () => {
+    if (Constants.appOwnership === 'expo' || !RewardedAd) return;
+    if (isAdFreeActive()) return;
+
+    rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
+        requestNonPersonalizedAdsOnly: true,
+    });
+
+    rewarded.addAdEventListener(RewardedAdEventType?.LOADED || 'loaded', () => {
+        console.log('Rewarded Loaded');
+    });
+
+    rewarded.addAdEventListener(RewardedAdEventType?.EARNED_REWARD || 'earned_reward', () => {
+        useStore.getState().grantAdFreeMinutes(60);
+    });
+
+    rewarded.load();
+};
+
+export const showRewardedIfReady = () => {
+    if (isAdFreeActive() || Constants.appOwnership === 'expo' || !rewarded) return false;
+    if (rewarded?.loaded) {
+        rewarded.show();
+        loadRewarded();
+        return true;
+    }
+    return false;
 };

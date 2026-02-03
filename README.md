@@ -5,10 +5,16 @@ A mindful challenge to distinguish between human creativity and AI-generated tex
 ## Features
 - **The Challenge**: Compare two texts and guess which is human-written.
 - **Ritual XP**: Earn points and maintain streaks for correct guesses.
-- **Leaderboards**: Compete globally or weekly via Supabase-powered leaderboards.
+- **Daily Ritual Challenge**: One curated daily pair with bonus XP and a separate daily streak (offline-first, synced when online).
+- **Theme Packs**: Multi-category missions with curated mixes.
+- **Ghost Run**: 10-round async run against your best score.
+- **Shield Tokens**: Earned streak protection to save a run.
+- **Leaderboards**: Compete globally, weekly, and seasonal, plus a friends leaderboard via Supabase-powered leaderboards.
 - **Offline-First**: Practice and play offline; sync when you're back.
 - **Guest Mode**: Play immediately without signing up. Create an account later to sync stats.
+- **Progressive Auth**: Guests are nudged to sign in after meaningful progress to protect streaks.
 - **Premium Experience**: Ad-supported with a clean "AI Slop" / Synthwave aesthetic. Subscription for ad-free play.
+- **Ad-Free Reward**: Watch a rewarded ad to unlock 1 hour of ad-free play.
 
 ## Architecture
 - **Offline-First**: The app is designed to work completely offline. Local user data (XP, streaks, history) is stored in SQLite (`expo-sqlite`).
@@ -34,9 +40,12 @@ The app requires environment variables for external services. Initialize these b
 1. **Supabase**: Update `src/utils/supabase.ts` or set env vars for:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
+   - Apply schema updates in `supabase_schema.sql` for leaderboards v2.
 2. **AdMob**: Configure App IDs in `app.json`:
    - `androidAppId`
    - `iosAppId`
+   - Set `expo.extra.admob.banner`, `expo.extra.admob.interstitial`, `expo.extra.admob.rewarded`
+3. **RevenueCat**: Set `expo.extra.revenuecat.ios` and `expo.extra.revenuecat.android`
 
 ## Getting Started
 
@@ -62,4 +71,3 @@ The app requires environment variables for external services. Initialize these b
    # Development Build (Physical Device)
    npx expo start --dev-client
    ```
-

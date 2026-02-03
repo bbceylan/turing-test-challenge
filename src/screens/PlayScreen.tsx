@@ -4,6 +4,8 @@ import { QuizView } from '../components/QuizView';
 import { CategorySelector } from '../components/CategorySelector';
 import { SmartBannerAd } from '../components/SmartBannerAd';
 import { useTheme } from '../hooks/useTheme';
+import { THEME_PACKS } from '../utils/themePacks';
+import { useStore } from '../store/useStore';
 
 interface PlayScreenProps {
     onNavigateToLeaderboard?: () => void;
@@ -11,7 +13,10 @@ interface PlayScreenProps {
 
 export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard }) => {
     const { colors } = useTheme();
+    const { stats } = useStore();
     const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+    const [selectedPack, setSelectedPack] = React.useState<string | null>(null);
+    const [mode, setMode] = React.useState<'SELECT' | 'CATEGORY' | 'DAILY' | 'PACK' | 'GHOST'>('SELECT');
 
     React.useEffect(() => {
         // Load the first interstitial when the screen mounts
@@ -20,12 +25,68 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard 
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
-            {!selectedCategory ? (
-                <CategorySelector onSelect={setSelectedCategory} />
-            ) : (
+            {mode === 'SELECT' && (
+                <CategorySelector
+                    onSelect={(category) => {
+                        setSelectedCategory(category);
+                        setMode('CATEGORY');
+                    }}
+                    onSelectDaily={() => {
+                        setSelectedCategory(null);
+                        setMode('DAILY');
+                    }}
+                    onSelectPack={(packId) => {
+                        setSelectedPack(packId);
+                        setMode('PACK');
+                    }}
+                    onSelectGhost={() => {
+                        setSelectedCategory(null);
+                        setSelectedPack(null);
+                        setMode('GHOST');
+                    }}
+                />
+            )}
+            {mode === 'CATEGORY' && selectedCategory && (
                 <QuizView
+                    mode="STANDARD"
                     category={selectedCategory}
-                    onBack={() => setSelectedCategory(null)}
+                    onBack={() => {
+                        setSelectedCategory(null);
+                        setMode('SELECT');
+                    }}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard}
+                />
+            )}
+            {mode === 'DAILY' && (
+                <QuizView
+                    mode="DAILY"
+                    onBack={() => {
+                        setSelectedCategory(null);
+                        setMode('SELECT');
+                    }}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard}
+                />
+            )}
+            {mode === 'PACK' && selectedPack && (
+                <QuizView
+                    mode="PACK"
+                    categories={THEME_PACKS.find(p => p.id === selectedPack)?.categories || []}
+                    onBack={() => {
+                        setSelectedPack(null);
+                        setMode('SELECT');
+                    }}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard}
+                />
+            )}
+            {mode === 'GHOST' && (
+                <QuizView
+                    mode="GHOST"
+                    roundLimit={10}
+                    ghostTarget={stats.ghostBestScore}
+                    onBack={() => {
+                        setSelectedPack(null);
+                        setMode('SELECT');
+                    }}
                     onNavigateToLeaderboard={onNavigateToLeaderboard}
                 />
             )}

@@ -19,10 +19,14 @@ export const getCategories = () => {
     return Array.from(categories).sort();
 };
 
-export const getRandomPair = (category?: string) => {
+export const getRandomPair = (category?: string | string[]) => {
     let pool = MOCK_PAIRS;
     if (category) {
-        pool = MOCK_PAIRS.filter(p => p.category === category);
+        if (Array.isArray(category)) {
+            pool = MOCK_PAIRS.filter(p => category.includes(p.category));
+        } else {
+            pool = MOCK_PAIRS.filter(p => p.category === category);
+        }
     }
     // Fallback if filtering yields no results (safety)
     if (pool.length === 0) pool = MOCK_PAIRS;

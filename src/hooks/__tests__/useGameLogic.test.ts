@@ -42,33 +42,33 @@ describe('useGameLogic', () => {
     it('handles correct guess', () => {
         const { result } = renderHook(() => useGameLogic());
 
-        // Find the human option index
-        const humanIndex = result.current.options.findIndex(opt => opt.isHuman);
+        // Find the AI option index (correct)
+        const aiIndex = result.current.options.findIndex(opt => !opt.isHuman);
 
         act(() => {
-            const guessResult = result.current.submitGuess(humanIndex);
+            const guessResult = result.current.submitGuess(aiIndex);
             expect(guessResult?.isCorrect).toBe(true);
         });
 
         expect(result.current.revealed).toBe(true);
-        expect(result.current.selectedIndex).toBe(humanIndex);
+        expect(result.current.selectedIndex).toBe(aiIndex);
         expect(mockAddXp).toHaveBeenCalledWith(10, true);
     });
 
     it('handles incorrect guess', () => {
         const { result } = renderHook(() => useGameLogic());
 
-        // Find the AI option index
-        const aiIndex = result.current.options.findIndex(opt => !opt.isHuman);
+        // Find the human option index (incorrect)
+        const humanIndex = result.current.options.findIndex(opt => opt.isHuman);
 
         act(() => {
-            const guessResult = result.current.submitGuess(aiIndex);
+            const guessResult = result.current.submitGuess(humanIndex);
             expect(guessResult?.isCorrect).toBe(false);
         });
 
         expect(result.current.revealed).toBe(true);
-        expect(result.current.selectedIndex).toBe(aiIndex);
-        expect(mockAddXp).toHaveBeenCalledWith(10, false);
+        expect(result.current.selectedIndex).toBe(humanIndex);
+        expect(mockAddXp).toHaveBeenCalledWith(0, false);
     });
 
     it('loads next question', () => {

@@ -29,11 +29,81 @@ export const initDb = async () => {
       total_xp INTEGER DEFAULT 0,
       current_streak INTEGER DEFAULT 0,
       max_streak INTEGER DEFAULT 0,
+      daily_streak INTEGER DEFAULT 0,
+      last_daily_date TEXT,
+      weekly_xp INTEGER DEFAULT 0,
+      season_xp INTEGER DEFAULT 0,
+      week_key TEXT,
+      season_key TEXT,
+      last_sync_xp INTEGER,
+      last_sync_at INTEGER,
+      friend_code TEXT,
+      streak_shields INTEGER DEFAULT 0,
+      ghost_best_score INTEGER DEFAULT 0,
+      ad_free_until INTEGER,
       last_played_at TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     INSERT OR IGNORE INTO user_stats (id, total_xp, current_streak, max_streak) VALUES (1, 0, 0, 0);
+  `);
+
+  // Migrate user_stats with new columns (daily ritual support)
+  const userStatsInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(user_stats)');
+  const userStatsCols = new Set(userStatsInfo.map(col => col.name));
+  if (!userStatsCols.has('daily_streak')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN daily_streak INTEGER DEFAULT 0');
+  }
+  if (!userStatsCols.has('last_daily_date')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN last_daily_date TEXT');
+  }
+  if (!userStatsCols.has('ad_free_until')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN ad_free_until INTEGER');
+  }
+  if (!userStatsCols.has('weekly_xp')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN weekly_xp INTEGER DEFAULT 0');
+  }
+  if (!userStatsCols.has('season_xp')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN season_xp INTEGER DEFAULT 0');
+  }
+  if (!userStatsCols.has('week_key')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN week_key TEXT');
+  }
+  if (!userStatsCols.has('season_key')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN season_key TEXT');
+  }
+  if (!userStatsCols.has('last_sync_xp')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN last_sync_xp INTEGER');
+  }
+  if (!userStatsCols.has('last_sync_at')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN last_sync_at INTEGER');
+  }
+  if (!userStatsCols.has('friend_code')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN friend_code TEXT');
+  }
+  if (!userStatsCols.has('streak_shields')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN streak_shields INTEGER DEFAULT 0');
+  }
+  if (!userStatsCols.has('ghost_best_score')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN ghost_best_score INTEGER DEFAULT 0');
+  }
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS daily_challenges (
+      date TEXT PRIMARY KEY,
+      pair_id TEXT NOT NULL,
+      category TEXT,
+      completed_at TIMESTAMP,
+      correct INTEGER,
+      xp_earned INTEGER
+    );
+  `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS friends (
+      friend_code TEXT PRIMARY KEY,
+      added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Check if milestones table needs migration (add category column)
@@ -59,6 +129,34 @@ export const initDb = async () => {
       completed_at TIMESTAMP
     );
   `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      total_xp INTEGER NOT NULL,
+      max_streak INTEGER NOT NULL,
+      weekly_xp INTEGER,
+      season_xp INTEGER,
+      week_key TEXT,
+      season_key TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  const syncInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(sync_queue)');
+  const syncCols = new Set(syncInfo.map(col => col.name));
+  if (!syncCols.has('weekly_xp')) {
+    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN weekly_xp INTEGER');
+  }
+  if (!syncCols.has('season_xp')) {
+    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN season_xp INTEGER');
+  }
+  if (!syncCols.has('week_key')) {
+    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN week_key TEXT');
+  }
+  if (!syncCols.has('season_key')) {
+    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN season_key TEXT');
+  }
 
   // Insert milestone definitions (preserves completed_at if already exists)
   await db.execAsync(`

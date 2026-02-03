@@ -16,10 +16,11 @@ describe('AuthScreen', () => {
     });
 
     it('renders correctly', () => {
-        const { getByText, getByPlaceholderText } = render(<AuthScreen />);
+        const { getByText } = render(<AuthScreen />);
         expect(getByText('Initialize Agent')).toBeTruthy();
-        expect(getByPlaceholderText('email@address.com')).toBeTruthy();
         expect(getByText('Continue as Guest')).toBeTruthy();
+        expect(getByText('Sign in with Apple')).toBeTruthy();
+        expect(getByText('Sign in with Google')).toBeTruthy();
     });
 
     it('sets Guest mode when button pressed', () => {

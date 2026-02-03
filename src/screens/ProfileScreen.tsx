@@ -5,13 +5,20 @@ import { useStore } from '../store/useStore';
 import { supabase } from '../utils/supabase';
 import { User, Edit3, Check, X, Share2 } from 'lucide-react-native';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
+import { loadRewarded, showRewardedIfReady } from '../utils/ads';
 
 export const ProfileScreen = () => {
-    const { stats, session, user, isGuest, setGuest, isPro } = useStore();
+    const { stats, session, user, isGuest, setGuest, isPro, adFreeUntil, friendCode } = useStore();
     const { colors } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [username, setUsername] = useState('');
     const [loading, setLoading] = useState(false);
+    const [analytics, setAnalytics] = useState<{ accuracy: number; total: number; aiChoiceRate: number; topMissCategory: string | null }>({
+        accuracy: 0,
+        total: 0,
+        aiChoiceRate: 0,
+        topMissCategory: null,
+    });
 
     useEffect(() => {
         if (user && !isGuest) {
@@ -20,6 +27,32 @@ export const ProfileScreen = () => {
             setUsername('Guest Agent');
         }
     }, [user, isGuest]);
+
+    useEffect(() => {
+        const loadAnalytics = async () => {
+            try {
+                const db = await (await import('../db/client')).getDb();
+                const totals = await db.getFirstAsync<{ total: number; correct: number; ai_choice: number }>(
+                    'SELECT COUNT(*) as total, SUM(is_correct) as correct, SUM(CASE WHEN chosen_human = 0 THEN 1 ELSE 0 END) as ai_choice FROM quiz_results'
+                );
+                const misses = await db.getFirstAsync<{ category: string; misses: number }>(
+                    'SELECT category, COUNT(*) as misses FROM quiz_results WHERE is_correct = 0 GROUP BY category ORDER BY misses DESC LIMIT 1'
+                );
+                const total = totals?.total || 0;
+                const correct = totals?.correct || 0;
+                const aiChoice = totals?.ai_choice || 0;
+                setAnalytics({
+                    accuracy: total > 0 ? Math.round((correct / total) * 100) : 0,
+                    total,
+                    aiChoiceRate: total > 0 ? Math.round((aiChoice / total) * 100) : 0,
+                    topMissCategory: misses?.category || null,
+                });
+            } catch {
+                // Ignore analytics errors
+            }
+        };
+        loadAnalytics();
+    }, []);
 
     const fetchProfile = async () => {
         try {
@@ -80,6 +113,17 @@ export const ProfileScreen = () => {
         }
     };
 
+    const handleShareFriendCode = async () => {
+        if (!friendCode) return;
+        try {
+            await Share.share({
+                message: `Add me on Turing Test! Friend code: ${friendCode}`,
+            });
+        } catch (error) {
+            console.error('Error sharing friend code:', error);
+        }
+    };
+
     const handlePurchase = async () => {
         if (isGuest) {
             Alert.alert('Guest Mode', 'Please sign in to upgrade to Pro.');
@@ -106,6 +150,16 @@ export const ProfileScreen = () => {
             Alert.alert('Error', 'Could not initiate purchase flow.');
         }
     };
+
+    const handleWatchAd = () => {
+        const shown = showRewardedIfReady();
+        if (!shown) {
+            loadRewarded();
+        }
+    };
+
+    const adFreeActive = !!adFreeUntil && adFreeUntil > Date.now();
+    const adFreeUntilLabel = adFreeActive ? new Date(adFreeUntil as number).toLocaleTimeString() : null;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
@@ -139,6 +193,11 @@ export const ProfileScreen = () => {
                             {!isGuest && <Edit3 color={colors.text.secondary} size={16} style={{ marginLeft: 8 }} />}
                         </TouchableOpacity>
                     )}
+                    <View style={styles.badgeRow}>
+                        <Text style={[styles.badgeText, { color: isPro ? COLORS.neonCyan : colors.text.secondary }]}>
+                            {isPro ? 'Pro Agent' : 'Ad-Supported'}
+                        </Text>
+                    </View>
                     <Text style={[styles.email, { color: colors.text.secondary }]}>{isGuest ? 'Offline Mode' : session?.user.email}</Text>
                 </View>
             </View>
@@ -152,6 +211,23 @@ export const ProfileScreen = () => {
                     <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Best Streak</Text>
                     <Text style={[styles.statValue, { color: COLORS.sunsetOrange }]}>{stats.maxStreak}</Text>
                 </View>
+            </View>
+
+            {adFreeActive && (
+                <View style={[styles.noticeBox, { borderColor: COLORS.neonCyan }]}>
+                    <Text style={[styles.noticeText, { color: colors.text.primary }]}>
+                        Ad-free active until {adFreeUntilLabel}
+                    </Text>
+                </View>
+            )}
+
+            <View style={[styles.insightsBox, { borderColor: colors.border.default }]}>
+                <Text style={[styles.insightsTitle, { color: colors.text.primary }]}>Insights</Text>
+                <Text style={[styles.insightsText, { color: colors.text.secondary }]}>Accuracy: {analytics.accuracy}% ({analytics.total} attempts)</Text>
+                <Text style={[styles.insightsText, { color: colors.text.secondary }]}>AI Choice Rate: {analytics.aiChoiceRate}%</Text>
+                {analytics.topMissCategory && (
+                    <Text style={[styles.insightsText, { color: colors.text.secondary }]}>Most Missed: {analytics.topMissCategory}</Text>
+                )}
             </View>
 
             <TouchableOpacity
@@ -173,6 +249,18 @@ export const ProfileScreen = () => {
                 <Text style={[styles.buttonText, { color: colors.text.primary }]}>Invite Friends</Text>
             </TouchableOpacity>
 
+            {friendCode && (
+                <TouchableOpacity
+                    style={[styles.button, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}
+                    onPress={handleShareFriendCode}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share Friend Code"
+                    accessibilityHint="Share your friend code"
+                >
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>Share Friend Code: {friendCode}</Text>
+                </TouchableOpacity>
+            )}
+
             {!isPro && (
                 <TouchableOpacity
                     style={[
@@ -186,6 +274,21 @@ export const ProfileScreen = () => {
                     accessibilityHint="Purchase Pro subscription to remove ads"
                 >
                     <Text style={[styles.buttonText, { color: colors.text.primary }]}>Go Ad-Free</Text>
+                </TouchableOpacity>
+            )}
+
+            {!isPro && (
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                    ]}
+                    onPress={handleWatchAd}
+                    accessibilityRole="button"
+                    accessibilityLabel="Watch Ad for Ad-Free Time"
+                    accessibilityHint="Watch a rewarded ad for one hour of ad-free play"
+                >
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>Watch Ad (1h Ad-Free)</Text>
                 </TouchableOpacity>
             )}
 
@@ -245,6 +348,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
+    badgeRow: {
+        marginTop: 6,
+        marginBottom: 4,
+    },
+    badgeText: {
+        fontSize: 11,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+    },
     input: {
         flex: 1,
         fontSize: 18,
@@ -260,6 +372,37 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 15,
         marginBottom: 40,
+    },
+    noticeBox: {
+        borderWidth: 1,
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 20,
+        backgroundColor: 'rgba(0, 240, 255, 0.08)',
+    },
+    noticeText: {
+        fontSize: 12,
+        textAlign: 'center',
+        letterSpacing: 0.3,
+    },
+    insightsBox: {
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 20,
+        backgroundColor: 'rgba(110, 44, 243, 0.08)',
+    },
+    insightsTitle: {
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        marginBottom: 8,
+    },
+    insightsText: {
+        fontSize: 12,
+        marginBottom: 4,
     },
     statBox: {
         flex: 1,

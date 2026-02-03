@@ -5,6 +5,28 @@ jest.mock('lucide-react-native', () => ({
     Globe: 'Globe',
     Calendar: 'Calendar',
     Lock: 'Lock',
+    Flame: 'Flame',
+    Crown: 'Crown',
+    Trophy: 'Trophy',
+    Zap: 'Zap',
+    RotateCcw: 'RotateCcw',
+    Award: 'Award',
+    Share2: 'Share2',
+    ArrowLeft: 'ArrowLeft',
+    User: 'User',
+    Edit3: 'Edit3',
+    Check: 'Check',
+    X: 'X',
+    Gamepad2: 'Gamepad2',
+    Target: 'Target',
+    Users: 'Users',
+    BookOpen: 'BookOpen',
+    Brain: 'Brain',
+    FlaskConical: 'FlaskConical',
+    Ghost: 'Ghost',
+    Monitor: 'Monitor',
+    Scroll: 'Scroll',
+    Sparkles: 'Sparkles',
 }));
 
 // Mock Supabase
@@ -34,7 +56,7 @@ jest.mock('expo-sqlite', () => ({
     openDatabaseAsync: jest.fn(() => Promise.resolve({
         runAsync: jest.fn(),
         getFirstAsync: jest.fn(),
-        getAllAsync: jest.fn(),
+        getAllAsync: jest.fn(() => Promise.resolve([])),
         execAsync: jest.fn(),
         withTransactionAsync: jest.fn((cb) => cb()),
     })),
@@ -78,6 +100,22 @@ jest.mock('expo-file-system', () => ({
     writeAsStringAsync: jest.fn(),
     readAsStringAsync: jest.fn(),
     getInfoAsync: jest.fn(),
+}));
+
+jest.mock('expo-file-system/legacy', () => ({
+    documentDirectory: 'file:///data/',
+    writeAsStringAsync: jest.fn(),
+    readAsStringAsync: jest.fn(),
+    getInfoAsync: jest.fn(),
+}));
+
+jest.mock('expo-web-browser', () => ({
+    maybeCompleteAuthSession: jest.fn(),
+    openAuthSessionAsync: jest.fn(() => Promise.resolve({ type: 'dismiss' })),
+}));
+
+jest.mock('expo-auth-session', () => ({
+    makeRedirectUri: jest.fn(() => 'app://redirect'),
 }));
 
 // Mock Navigation

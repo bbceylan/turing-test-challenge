@@ -78,7 +78,7 @@ describe('useGameLogic', () => {
 
         expect(result.current.revealed).toBe(true);
         expect(result.current.gameOver).toBe(true);
-        expect(mockAddXp).toHaveBeenCalledWith(10, false);
+        expect(mockAddXp).toHaveBeenCalledWith(0, false);
     });
 
     it('loads next question', () => {

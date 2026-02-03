@@ -21,7 +21,7 @@ import { supabase } from './src/utils/supabase';
 import { AuthScreen } from './src/screens/AuthScreen';
 
 import { registerForPushNotificationsAsync, scheduleDailyReminder } from './src/utils/notifications';
-import { loadInterstitial } from './src/utils/ads';
+import { loadInterstitial, loadRewarded } from './src/utils/ads';
 
 export default function App() {
   const { loadStats, isLoading, session, setSession } = useStore();
@@ -41,6 +41,7 @@ export default function App() {
           registerForPushNotificationsAsync();
           scheduleDailyReminder();
           loadInterstitial();
+          loadRewarded();
         } catch (nonCriticalError) {
           if (__DEV__) {
             console.warn('Non-critical setup failed:', nonCriticalError);

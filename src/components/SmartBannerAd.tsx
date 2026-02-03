@@ -5,12 +5,14 @@ import { BannerAd, BannerAdSize, TestIds } from '../utils/ads_safe';
 import Constants from 'expo-constants';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
 
-const adUnitId = (__DEV__ && TestIds) ? TestIds.BANNER : 'YOUR_REAL_AD_UNIT_ID';
+const adConfig = (Constants.expoConfig as any)?.extra?.admob || {};
+const adUnitId = (__DEV__ && TestIds) ? TestIds.BANNER : (adConfig.banner || 'YOUR_REAL_AD_UNIT_ID');
 
 export const SmartBannerAd = () => {
-    const { isPro } = useStore();
+    const { isPro, adFreeUntil } = useStore();
 
-    if (isPro || Constants.appOwnership === 'expo' || !BannerAd) return null;
+    const adFreeActive = !!adFreeUntil && adFreeUntil > Date.now();
+    if (isPro || adFreeActive || Constants.appOwnership === 'expo' || !BannerAd) return null;
 
     return (
         <View style={styles.container}>

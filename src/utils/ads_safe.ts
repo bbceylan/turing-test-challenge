@@ -35,9 +35,33 @@ if (!hasNativeAdMob) {
         AdEventType: {
             LOADED: 'loaded',
         },
+        RewardedAdEventType: {
+            LOADED: 'loaded',
+            EARNED_REWARD: 'earned_reward',
+        },
+        RewardedAd: {
+            createForAdRequest: () => {
+                let listeners: any = {};
+                return {
+                    addAdEventListener: (event: string, cb: any) => { listeners[event] = cb; },
+                    load: () => {
+                        setTimeout(() => {
+                            if (listeners['loaded']) listeners['loaded']();
+                        }, 500);
+                    },
+                    show: () => {
+                        const { Alert } = require('react-native');
+                        Alert.alert("Rewarded Ad (Mock)", "Thanks for supporting! Ad-free time granted.");
+                        if (listeners['earned_reward']) listeners['earned_reward']({ type: 'ad_free', amount: 1 });
+                    },
+                    loaded: true,
+                };
+            },
+        },
         TestIds: {
             INTERSTITIAL: 'test-id',
             BANNER: 'test-id',
+            REWARDED: 'test-id',
         },
         BannerAd: () => {
             const React = require('react');
@@ -64,6 +88,8 @@ if (!hasNativeAdMob) {
 
 export const InterstitialAd = AdMobModule?.InterstitialAd;
 export const AdEventType = AdMobModule?.AdEventType;
+export const RewardedAd = AdMobModule?.RewardedAd;
+export const RewardedAdEventType = AdMobModule?.RewardedAdEventType;
 export const TestIds = AdMobModule?.TestIds;
 export const BannerAd = AdMobModule?.BannerAd;
 export const BannerAdSize = AdMobModule?.BannerAdSize;

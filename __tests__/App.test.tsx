@@ -50,6 +50,7 @@ jest.mock('../src/utils/notifications', () => ({
 }));
 jest.mock('../src/utils/ads', () => ({
     loadInterstitial: jest.fn(),
+    loadRewarded: jest.fn(),
 }));
 
 describe('App Smoke Test', () => {
@@ -81,6 +82,7 @@ describe('App Smoke Test', () => {
         (useStore as unknown as jest.Mock).mockReturnValue({
             loadStats: jest.fn(),
             isLoading: true, // Force loading
+            setSession: jest.fn(),
         });
 
         const { getByText } = render(<App />);

@@ -23,6 +23,9 @@ interface GameOverModalProps {
     isNewRecord: boolean;
     onTryAgain: () => void;
     onViewLeaderboard: () => void;
+    showUpsell?: boolean;
+    onGoPro?: () => void;
+    onWatchAd?: () => void;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -33,6 +36,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
     isNewRecord,
     onTryAgain,
     onViewLeaderboard,
+    showUpsell,
+    onGoPro,
+    onWatchAd,
 }) => {
     const { colors } = useTheme();
 
@@ -175,6 +181,30 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                             <Trophy color={COLORS.neonCyan} size={20} />
                             <Text style={styles.secondaryButtonText}>Leaderboard</Text>
                         </TouchableOpacity>
+
+                        {showUpsell && (
+                            <View style={styles.upsellContainer}>
+                                <Text style={styles.upsellTitle}>Keep the streak going</Text>
+                                <Text style={styles.upsellSub}>Go ad-free or watch one ad for 1 hour ad-free.</Text>
+                                <View style={styles.upsellButtons}>
+                                    <TouchableOpacity
+                                        style={[styles.button, styles.upsellPrimary]}
+                                        onPress={onGoPro}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Crown color={COLORS.navy} size={18} />
+                                        <Text style={styles.upsellPrimaryText}>Go Ad-Free</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.button, styles.upsellSecondary]}
+                                        onPress={onWatchAd}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={styles.upsellSecondaryText}>Watch Ad (1h)</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
                     </Animated.View>
                 </Animated.View>
             </View>
@@ -298,5 +328,53 @@ const styles = StyleSheet.create({
         color: COLORS.neonCyan,
         fontSize: 16,
         fontWeight: '600',
+    },
+    upsellContainer: {
+        marginTop: 8,
+        borderRadius: 14,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: COLORS.glowPurple,
+        backgroundColor: 'rgba(110, 44, 243, 0.12)',
+        gap: 10,
+    },
+    upsellTitle: {
+        color: COLORS.white,
+        fontSize: 14,
+        fontWeight: '700',
+        textAlign: 'center',
+        letterSpacing: 0.5,
+    },
+    upsellSub: {
+        color: COLORS.gray,
+        fontSize: 11,
+        textAlign: 'center',
+        letterSpacing: 0.2,
+    },
+    upsellButtons: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    upsellPrimary: {
+        flex: 1,
+        backgroundColor: COLORS.neonCyan,
+        borderWidth: 1,
+        borderColor: COLORS.neonCyan,
+    },
+    upsellPrimaryText: {
+        color: COLORS.navy,
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    upsellSecondary: {
+        flex: 1,
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: COLORS.neonPink,
+    },
+    upsellSecondaryText: {
+        color: COLORS.neonPink,
+        fontSize: 12,
+        fontWeight: '700',
     },
 });

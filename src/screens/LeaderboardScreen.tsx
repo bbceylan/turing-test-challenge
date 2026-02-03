@@ -1,22 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, TextInput, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../store/useStore';
-import { Globe, Calendar, Lock, Flame } from 'lucide-react-native';
+import { Globe, Calendar, Lock, Flame, Users, Crown } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Skeleton } from '../components/Skeleton';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
+import { getDb } from '../db/client';
+import { getWeekKey, getSeasonKey } from '../utils/periods';
 
 interface Player {
     id: string;
     username: string;
     total_xp: number;
     max_streak?: number;
+    weekly_xp?: number;
+    season_xp?: number;
 }
 
-type Tab = 'GLOBAL' | 'WEEKLY' | 'STREAKS';
+type Tab = 'GLOBAL' | 'WEEKLY' | 'SEASON' | 'STREAKS' | 'FRIENDS';
 
 // Rank badge colors for top 3
 const getRankStyle = (index: number) => {
@@ -27,7 +31,22 @@ const getRankStyle = (index: number) => {
 };
 
 // Extracted & Memoized Item Component for Performance
-const LeaderboardItem = React.memo(({ item, index, colors, showStreak }: { item: Player; index: number, colors: any, showStreak?: boolean }) => (
+const getTier = (index: number, total: number) => {
+    const rank = index + 1;
+    const pct = rank / Math.max(total, 1);
+    if (pct <= 0.1) return { label: 'Gold', color: '#FFD700' };
+    if (pct <= 0.3) return { label: 'Silver', color: '#C0C0C0' };
+    if (pct <= 0.6) return { label: 'Bronze', color: '#CD7F32' };
+    return null;
+};
+
+type RowMode = 'TOTAL' | 'WEEKLY' | 'SEASON' | 'STREAK';
+
+const LeaderboardItem = React.memo(({ item, index, colors, mode, total }: { item: Player; index: number, colors: any, mode: RowMode, total: number }) => {
+    const tier = getTier(index, total);
+    const showStreak = mode === 'STREAK';
+    const xpLabel = mode === 'WEEKLY' ? `${(item as any).weekly_xp ?? 0} XP` : mode === 'SEASON' ? `${(item as any).season_xp ?? 0} XP` : `${item.total_xp} XP`;
+    return (
     <Animated.View
         entering={FadeInDown.delay(index * 50).springify()}
         style={[
@@ -58,11 +77,17 @@ const LeaderboardItem = React.memo(({ item, index, colors, showStreak }: { item:
             )}
         </View>
         <Text style={[styles.xp, { color: showStreak ? COLORS.sunsetOrange : colors.text.highlight }]}>
-            {showStreak ? `${item.max_streak || 0}` : `${item.total_xp} XP`}
+            {showStreak ? `${item.max_streak || 0}` : xpLabel}
         </Text>
         {showStreak && <Flame size={16} color={COLORS.sunsetOrange} style={{ marginLeft: 4 }} />}
+        {tier && (
+            <View style={[styles.tierBadge, { borderColor: tier.color }]}>
+                <Text style={[styles.tierText, { color: tier.color }]}>{tier.label}</Text>
+            </View>
+        )}
     </Animated.View>
-));
+    );
+});
 
 export const LeaderboardScreen = () => {
     const { isGuest } = useStore();
@@ -72,6 +97,14 @@ export const LeaderboardScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('GLOBAL');
     const [error, setError] = useState<string | null>(null);
+    const [friendCodes, setFriendCodes] = useState<string[]>([]);
+    const [friendInput, setFriendInput] = useState('');
+
+    const loadFriends = React.useCallback(async () => {
+        const db = await getDb();
+        const rows = await db.getAllAsync<{ friend_code: string }>('SELECT friend_code FROM friends ORDER BY added_at DESC');
+        setFriendCodes(rows.map(r => r.friend_code));
+    }, []);
 
     const fetchLeaderboard = React.useCallback(async () => {
         if (isGuest) {
@@ -90,12 +123,39 @@ export const LeaderboardScreen = () => {
                     .select('id, username, total_xp, max_streak')
                     .order('max_streak', { ascending: false })
                     .limit(50);
+            } else if (activeTab === 'WEEKLY') {
+                query = supabase
+                    .from('profiles')
+                    .select('id, username, total_xp, max_streak, weekly_xp, week_key')
+                    .eq('week_key', getWeekKey())
+                    .order('weekly_xp', { ascending: false })
+                    .limit(50);
+            } else if (activeTab === 'SEASON') {
+                query = supabase
+                    .from('profiles')
+                    .select('id, username, total_xp, max_streak, season_xp, season_key')
+                    .eq('season_key', getSeasonKey())
+                    .order('season_xp', { ascending: false })
+                    .limit(50);
+            } else if (activeTab === 'FRIENDS') {
+                if (friendCodes.length === 0) {
+                    setPlayers([]);
+                    setLoading(false);
+                    setRefreshing(false);
+                    return;
+                }
+                query = supabase
+                    .from('profiles')
+                    .select('id, username, total_xp, max_streak')
+                    .in('friend_code', friendCodes)
+                    .order('total_xp', { ascending: false })
+                    .limit(50);
             } else {
                 query = supabase
                     .from('profiles')
                     .select('id, username, total_xp, max_streak')
                     .order('total_xp', { ascending: false })
-                    .limit(activeTab === 'GLOBAL' ? 50 : 10);
+                    .limit(50);
             }
 
             const { data, error } = await query;
@@ -109,11 +169,15 @@ export const LeaderboardScreen = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [activeTab, isGuest]);
+    }, [activeTab, isGuest, friendCodes]);
 
     useEffect(() => {
         fetchLeaderboard();
     }, [fetchLeaderboard]);
+
+    useEffect(() => {
+        loadFriends();
+    }, [loadFriends]);
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
@@ -121,7 +185,11 @@ export const LeaderboardScreen = () => {
     }, [fetchLeaderboard]);
 
     const renderTabs = () => (
-        <View style={[styles.tabContainer, { backgroundColor: colors.background.secondary }]}>
+        <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.tabContainer, { backgroundColor: colors.background.secondary }]}
+        >
             <TouchableOpacity
                 style={[styles.tab, activeTab === 'GLOBAL' && { backgroundColor: colors.border.default }]}
                 onPress={() => {
@@ -143,6 +211,16 @@ export const LeaderboardScreen = () => {
                 <Text style={[styles.tabText, { color: activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary }]}>Weekly</Text>
             </TouchableOpacity>
             <TouchableOpacity
+                style={[styles.tab, activeTab === 'SEASON' && { backgroundColor: colors.border.default }]}
+                onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveTab('SEASON');
+                }}
+            >
+                <Crown size={18} color={activeTab === 'SEASON' ? colors.text.primary : colors.text.secondary} />
+                <Text style={[styles.tabText, { color: activeTab === 'SEASON' ? colors.text.primary : colors.text.secondary }]}>Season</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
                 style={[styles.tab, activeTab === 'STREAKS' && { backgroundColor: colors.border.default }]}
                 onPress={() => {
                     Haptics.selectionAsync();
@@ -152,7 +230,17 @@ export const LeaderboardScreen = () => {
                 <Flame size={18} color={activeTab === 'STREAKS' ? COLORS.sunsetOrange : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'STREAKS' ? COLORS.sunsetOrange : colors.text.secondary }]}>Streaks</Text>
             </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+                style={[styles.tab, activeTab === 'FRIENDS' && { backgroundColor: colors.border.default }]}
+                onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveTab('FRIENDS');
+                }}
+            >
+                <Users size={18} color={activeTab === 'FRIENDS' ? colors.text.primary : colors.text.secondary} />
+                <Text style={[styles.tabText, { color: activeTab === 'FRIENDS' ? colors.text.primary : colors.text.secondary }]}>Friends</Text>
+            </TouchableOpacity>
+        </ScrollView>
     );
 
     const renderContent = () => {
@@ -198,13 +286,51 @@ export const LeaderboardScreen = () => {
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text.accent} />
                 }
+                ListHeaderComponent={
+                    activeTab === 'FRIENDS' ? (
+                        <View style={styles.friendBox}>
+                            <Text style={[styles.friendTitle, { color: colors.text.primary }]}>Friend Codes</Text>
+                            <View style={styles.friendRow}>
+                                <TextInput
+                                    style={[styles.friendInput, { color: colors.text.primary, borderColor: colors.border.default }]}
+                                    placeholder="Enter friend code"
+                                    placeholderTextColor={colors.text.secondary}
+                                    value={friendInput}
+                                    onChangeText={setFriendInput}
+                                    autoCapitalize="characters"
+                                />
+                                <TouchableOpacity
+                                    style={[styles.friendButton, { borderColor: colors.text.highlight }]}
+                                    onPress={async () => {
+                                        const code = friendInput.trim().toUpperCase();
+                                        if (!code) return;
+                                        const db = await getDb();
+                                        await db.runAsync('INSERT OR IGNORE INTO friends (friend_code) VALUES (?)', [code]);
+                                        setFriendInput('');
+                                        loadFriends();
+                                    }}
+                                >
+                                    <Text style={[styles.friendButtonText, { color: colors.text.primary }]}>Add</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ) : null
+                }
                 ListEmptyComponent={
                     <View style={styles.empty}>
                         <Text style={[styles.emptyText, { color: colors.text.primary }]}>No rankings available yet.</Text>
                         <Text style={[styles.emptySubText, { color: colors.text.secondary }]}>Be the first to sync your XP!</Text>
                     </View>
                 }
-                renderItem={({ item, index }) => <LeaderboardItem item={item} index={index} colors={colors} showStreak={activeTab === 'STREAKS'} />}
+                renderItem={({ item, index }) => (
+                    <LeaderboardItem
+                        item={item}
+                        index={index}
+                        colors={colors}
+                        mode={activeTab === 'STREAKS' ? 'STREAK' : activeTab === 'WEEKLY' ? 'WEEKLY' : activeTab === 'SEASON' ? 'SEASON' : 'TOTAL'}
+                        total={players.length}
+                    />
+                )}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 initialNumToRender={10}
                 maxToRenderPerBatch={10}
@@ -217,6 +343,7 @@ export const LeaderboardScreen = () => {
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
             <Text style={[styles.title, { color: colors.text.accent }]}>Rankings</Text>
             {renderTabs()}
+            <Text style={[styles.subTitle, { color: colors.text.secondary }]}>Season resets monthly • Weekly resets Mondays</Text>
             {renderContent()}
         </View>
     );
@@ -239,18 +366,25 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 20,
     },
+    subTitle: {
+        fontSize: 11,
+        marginBottom: 10,
+        letterSpacing: 0.4,
+        textTransform: 'uppercase',
+    },
     tabContainer: {
         flexDirection: 'row',
         marginBottom: 20,
         borderRadius: 12,
         padding: 4,
+        gap: 8,
     },
     tab: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 10,
+        paddingHorizontal: 12,
         borderRadius: 10,
         gap: 8,
     },
@@ -310,6 +444,19 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+    tierBadge: {
+        marginLeft: 8,
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    tierText: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
     guestTitle: {
         fontSize: 20,
         fontWeight: 'bold',
@@ -331,5 +478,43 @@ const styles = StyleSheet.create({
     },
     retryButtonText: {
         fontWeight: 'bold',
+    },
+    friendBox: {
+        marginBottom: 16,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(110, 44, 243, 0.3)',
+        backgroundColor: 'rgba(110, 44, 243, 0.08)',
+    },
+    friendTitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        marginBottom: 8,
+    },
+    friendRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    friendInput: {
+        flex: 1,
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        fontSize: 12,
+    },
+    friendButton: {
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+    },
+    friendButtonText: {
+        fontSize: 12,
+        fontWeight: '700',
     },
 });

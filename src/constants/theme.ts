@@ -98,4 +98,5 @@ export const CATEGORIES = [
 export const XP_VALUES = {
     CORRECT_GUESS: 10,
     STREAK_BONUS_BASE: 5,
+    DAILY_BONUS: 15,
 };
