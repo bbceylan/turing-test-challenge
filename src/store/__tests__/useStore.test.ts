@@ -1,52 +1,102 @@
+import { renderHook, act } from '@testing-library/react-native';
 import { useStore } from '../useStore';
 import { getDb } from '../../db/client';
 
-// Mock getDb manually since it's used directly
+// Mock Dependencies
 jest.mock('../../db/client', () => ({
-    getDb: jest.fn(() => Promise.resolve({
-        runAsync: jest.fn(),
-        getFirstAsync: jest.fn(),
-    })),
+    getDb: jest.fn(),
+}));
+
+jest.mock('../../utils/supabase', () => ({
+    supabase: {
+        auth: { getSession: jest.fn() },
+        from: jest.fn(() => ({ upsert: jest.fn() }))
+    }
+}));
+
+jest.mock('../../utils/widget', () => ({
+    updateWidgetData: jest.fn()
+}));
+
+jest.mock('expo-constants', () => ({
+    expoConfig: { extra: {} }
 }));
 
 describe('useStore Logic', () => {
+    const mockRunAsync = jest.fn();
+    const mockGetFirstAsync = jest.fn();
+
     beforeEach(() => {
+        jest.clearAllMocks();
+        (getDb as jest.Mock).mockResolvedValue({
+            runAsync: mockRunAsync,
+            getFirstAsync: mockGetFirstAsync,
+        });
+
+        // Reset store state
         useStore.setState({
             stats: { totalXp: 0, currentStreak: 0, maxStreak: 0 },
-            isGuest: false,
             session: null,
+            isGuest: true
         });
-        jest.clearAllMocks();
     });
 
-    it('updates Guest state correctly', () => {
-        const { setGuest } = useStore.getState();
-        setGuest(true);
-        expect(useStore.getState().isGuest).toBe(true);
-    });
+    it('adds XP and increments streak on correct answer', async () => {
+        const { result } = renderHook(() => useStore());
 
-    it('increments XP and Streak on correct guess', async () => {
-        const { addXp } = useStore.getState();
-        await addXp(10, true);
-
-        const { stats } = useStore.getState();
-        expect(stats.totalXp).toBe(10);
-        expect(stats.currentStreak).toBe(1);
-        expect(stats.maxStreak).toBe(1);
-    });
-
-    it('resets Streak on incorrect guess', async () => {
-        // Setup initial state
-        useStore.setState({
-            stats: { totalXp: 50, currentStreak: 5, maxStreak: 5 }
+        await act(async () => {
+            await result.current.addXp(10, true);
         });
 
-        const { addXp } = useStore.getState();
-        await addXp(10, false);
+        expect(result.current.stats.totalXp).toBe(10);
+        expect(result.current.stats.currentStreak).toBe(1);
+        expect(result.current.stats.maxStreak).toBe(1);
 
-        const { stats } = useStore.getState();
-        expect(stats.totalXp).toBe(50); // XP unchanged
-        expect(stats.currentStreak).toBe(0); // Streak reset
-        expect(stats.maxStreak).toBe(5); // Max preserved
+        // specific DB call check could go here if needed
+        expect(mockRunAsync).toHaveBeenCalled();
+    });
+
+    it('resets streak on incorrect answer', async () => {
+        const { result } = renderHook(() => useStore());
+
+        // First get some streak
+        // First get some streak
+        act(() => {
+            useStore.setState({
+                stats: { totalXp: 50, currentStreak: 5, maxStreak: 5 }
+            });
+        });
+
+        await act(async () => {
+            await result.current.addXp(10, false);
+        });
+
+        expect(result.current.stats.totalXp).toBe(50); // No XP gain
+        expect(result.current.stats.currentStreak).toBe(0); // Reset
+        expect(result.current.stats.maxStreak).toBe(5); // Max preserved
+    });
+
+    it('updates max streak only if current exceeds it', async () => {
+        const { result } = renderHook(() => useStore());
+
+        act(() => {
+            useStore.setState({
+                stats: { totalXp: 100, currentStreak: 9, maxStreak: 10 }
+            });
+        });
+
+        await act(async () => {
+            await result.current.addXp(10, true);
+        });
+
+        expect(result.current.stats.currentStreak).toBe(10);
+        expect(result.current.stats.maxStreak).toBe(10); // Equal, no change
+
+        await act(async () => {
+            await result.current.addXp(10, true);
+        });
+
+        expect(result.current.stats.currentStreak).toBe(11);
+        expect(result.current.stats.maxStreak).toBe(11); // New Record
     });
 });

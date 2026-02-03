@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { initDb } from './src/db/client';
 import { useStore } from './src/store/useStore';
 import { COLORS } from './src/constants/theme';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { BlurView } from 'expo-blur';
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -119,11 +120,21 @@ export default function App() {
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              backgroundColor: COLORS.navy,
+              backgroundColor: Platform.OS === 'ios' ? 'transparent' : COLORS.navy,
               borderTopColor: 'rgba(110, 44, 243, 0.3)',
+              position: Platform.OS === 'ios' ? 'absolute' : 'relative',
               height: 85,
               paddingBottom: 25,
             },
+            tabBarBackground: () => (
+              Platform.OS === 'ios' ? (
+                <BlurView
+                  tint="dark"
+                  intensity={30}
+                  style={StyleSheet.absoluteFill}
+                />
+              ) : undefined
+            ),
             tabBarActiveTintColor: COLORS.pink,
             tabBarInactiveTintColor: COLORS.gray,
           }}

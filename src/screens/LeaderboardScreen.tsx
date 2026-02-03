@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../store/useStore';
@@ -80,14 +81,20 @@ export const LeaderboardScreen = () => {
         <View style={[styles.tabContainer, { backgroundColor: colors.background.secondary }]}>
             <TouchableOpacity
                 style={[styles.tab, activeTab === 'GLOBAL' && { backgroundColor: colors.border.default }]}
-                onPress={() => setActiveTab('GLOBAL')}
+                onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveTab('GLOBAL');
+                }}
             >
                 <Globe size={20} color={activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary }]}>Global</Text>
             </TouchableOpacity>
             <TouchableOpacity
                 style={[styles.tab, activeTab === 'WEEKLY' && { backgroundColor: colors.border.default }]}
-                onPress={() => setActiveTab('WEEKLY')}
+                onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveTab('WEEKLY');
+                }}
             >
                 <Calendar size={20} color={activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary }]}>Weekly</Text>
