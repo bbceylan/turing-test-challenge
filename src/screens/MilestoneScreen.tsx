@@ -27,7 +27,7 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
     { key: 'streak', title: 'Streak Masters', icon: <Flame size={20} color={COLORS.sunsetOrange} />, color: COLORS.sunsetOrange },
     { key: 'xp', title: 'XP Collectors', icon: <Award size={20} color="#00FF88" />, color: '#00FF88' }, // Neon green
     { key: 'category', title: 'Category Experts', icon: <BookOpen size={20} color={COLORS.neonPink} />, color: COLORS.neonPink },
-    { key: 'special', title: 'Special Combos', icon: <Zap size={20} color={COLORS.neonPurple} />, color: COLORS.neonPurple },
+    { key: 'special', title: 'Special Combos', icon: <Zap size={20} color="#FF6BFF" />, color: '#FF6BFF' }, // Bright magenta
     { key: 'legendary', title: 'Legendary', icon: <Crown size={20} color="#FFD700" />, color: '#FFD700' }, // Gold
 ];
 

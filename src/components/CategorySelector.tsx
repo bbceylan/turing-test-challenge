@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
 import { getCategories } from '../utils/mockData';
 import { BookOpen, Brain, FlaskConical, Ghost, Monitor, Scroll, Sparkles } from 'lucide-react-native';
@@ -11,6 +10,7 @@ import Animated, {
     withRepeat,
     withTiming,
     withSequence,
+    withDelay,
     FadeInDown,
     Easing,
 } from 'react-native-reanimated';
@@ -19,27 +19,83 @@ interface CategorySelectorProps {
     onSelect: (category: string) => void;
 }
 
-// Miami/Cyberpunk category colors
+// Miami/Cyberpunk category colors - all unique
 const CATEGORY_COLORS: Record<string, string> = {
     'Literature': COLORS.neonCyan,
-    'Philosophy': COLORS.neonPurple,
+    'Philosophy': '#FF6BFF', // Bright magenta
     'Science': '#00FF88', // Neon green
     'Fantasy': COLORS.neonPink,
-    'Horror': COLORS.sunsetPink,
-    'Religious': COLORS.sunsetOrange,
+    'Horror': '#FF3333', // Neon red
+    'Religious': '#FFD700', // Gold
+    'History': COLORS.sunsetOrange,
+    'Pop Culture': '#00FFFF', // Bright cyan
 };
 
 const getIconForCategory = (category: string) => {
     const color = CATEGORY_COLORS[category] || COLORS.neonCyan;
     switch (category) {
-        case 'Literature': return <BookOpen size={28} color={color} />;
-        case 'Philosophy': return <Brain size={28} color={color} />;
-        case 'Science': return <FlaskConical size={28} color={color} />;
-        case 'Fantasy': return <Sparkles size={28} color={color} />;
-        case 'Horror': return <Ghost size={28} color={color} />;
-        case 'Religious': return <Scroll size={28} color={color} />;
-        default: return <Monitor size={28} color={color} />;
+        case 'Literature': return <BookOpen size={32} color={color} />;
+        case 'Philosophy': return <Brain size={32} color={color} />;
+        case 'Science': return <FlaskConical size={32} color={color} />;
+        case 'Fantasy': return <Sparkles size={32} color={color} />;
+        case 'Horror': return <Ghost size={32} color={color} />;
+        case 'Religious': return <Scroll size={32} color={color} />;
+        case 'History': return <Scroll size={32} color={color} />;
+        case 'Pop Culture': return <Monitor size={32} color={color} />;
+        default: return <Monitor size={32} color={color} />;
     }
+};
+
+// Animated card with blinking glow
+const AnimatedCategoryCard = ({ category, onSelect, index }: { category: string; onSelect: (cat: string) => void; index: number }) => {
+    const categoryColor = CATEGORY_COLORS[category] || COLORS.neonCyan;
+    const glowOpacity = useSharedValue(0.3);
+
+    useEffect(() => {
+        // Stagger the animation start for each card
+        const delay = index * 200;
+        glowOpacity.value = withDelay(
+            delay,
+            withRepeat(
+                withSequence(
+                    withTiming(0.8, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+                    withTiming(0.3, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+                ),
+                -1,
+                true
+            )
+        );
+    }, []);
+
+    const glowStyle = useAnimatedStyle(() => ({
+        shadowOpacity: glowOpacity.value,
+    }));
+
+    return (
+        <Animated.View
+            entering={FadeInDown.delay(150 + index * 60).springify()}
+            style={[
+                styles.cardWrapper,
+                glowStyle,
+                { shadowColor: categoryColor }
+            ]}
+        >
+            <TouchableOpacity
+                style={[styles.card, { borderColor: categoryColor }]}
+                onPress={() => onSelect(category)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Select ${category} category`}
+            >
+                <View style={[styles.cardInner, { backgroundColor: `${categoryColor}10` }]}>
+                    <View style={[styles.iconContainer, { borderColor: categoryColor, backgroundColor: `${categoryColor}20` }]}>
+                        {getIconForCategory(category)}
+                    </View>
+                    <Text style={[styles.categoryText, { color: categoryColor }]}>{category}</Text>
+                </View>
+            </TouchableOpacity>
+        </Animated.View>
+    );
 };
 
 // Animated scanline component
@@ -111,33 +167,14 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({ onSelect }) 
 
             <Animated.Text style={[styles.title, titleFlicker]}>SELECT MISSION</Animated.Text>
             <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
-                {categories.map((category, index) => {
-                    const categoryColor = CATEGORY_COLORS[category] || COLORS.neonCyan;
-                    return (
-                        <Animated.View
-                            key={category}
-                            entering={FadeInDown.delay(200 + index * 80).springify()}
-                        >
-                            <TouchableOpacity
-                                style={[
-                                    styles.card,
-                                    { borderColor: categoryColor },
-                                    { shadowColor: categoryColor, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
-                                ]}
-                                onPress={() => onSelect(category)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Select ${category} category`}
-                            >
-                                <BlurView intensity={15} tint="dark" style={styles.blur}>
-                                    <View style={[styles.iconContainer, { borderColor: categoryColor, backgroundColor: `${categoryColor}15` }]}>
-                                        {getIconForCategory(category)}
-                                    </View>
-                                    <Text style={[styles.categoryText, { color: categoryColor }]}>{category}</Text>
-                                </BlurView>
-                            </TouchableOpacity>
-                        </Animated.View>
-                    );
-                })}
+                {categories.map((category, index) => (
+                    <AnimatedCategoryCard
+                        key={category}
+                        category={category}
+                        onSelect={onSelect}
+                        index={index}
+                    />
+                ))}
             </ScrollView>
         </View>
     );
@@ -262,31 +299,35 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingBottom: 120,
     },
-    card: {
+    cardWrapper: {
         width: '48%',
-        aspectRatio: 1.1,
+        aspectRatio: 1,
         marginBottom: 16,
-        borderRadius: 4,
+        shadowOffset: { width: 0, height: 0 },
+        shadowRadius: 15,
+    },
+    card: {
+        flex: 1,
+        borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 2,
     },
-    blur: {
+    cardInner: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 15,
-        backgroundColor: 'rgba(10, 14, 41, 0.8)',
+        padding: 16,
+        backgroundColor: 'rgba(10, 14, 41, 0.95)',
     },
     iconContainer: {
-        marginBottom: 12,
-        padding: 14,
-        borderRadius: 4,
+        marginBottom: 16,
+        padding: 18,
+        borderRadius: 16,
         borderWidth: 1,
     },
     categoryText: {
-        fontSize: 13,
+        fontSize: 16,
         fontWeight: '700',
-        letterSpacing: 2,
-        textTransform: 'uppercase',
+        textAlign: 'center',
     }
 });
