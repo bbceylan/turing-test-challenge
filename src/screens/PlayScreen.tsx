@@ -3,9 +3,14 @@ import { StyleSheet, View } from 'react-native';
 import { QuizView } from '../components/QuizView';
 import { CategorySelector } from '../components/CategorySelector';
 import { SmartBannerAd } from '../components/SmartBannerAd';
-import { COLORS } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
-export const PlayScreen = () => {
+interface PlayScreenProps {
+    onNavigateToLeaderboard?: () => void;
+}
+
+export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard }) => {
+    const { colors } = useTheme();
     const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -14,13 +19,14 @@ export const PlayScreen = () => {
     }, []);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
             {!selectedCategory ? (
                 <CategorySelector onSelect={setSelectedCategory} />
             ) : (
                 <QuizView
                     category={selectedCategory}
                     onBack={() => setSelectedCategory(null)}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard}
                 />
             )}
             <SmartBannerAd />
@@ -31,6 +37,5 @@ export const PlayScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.navy,
     }
 });

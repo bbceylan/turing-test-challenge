@@ -3,8 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View, Alert, Platform } from 'react
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { supabase } from '../utils/supabase';
-import { COLORS } from '../constants/theme';
+import { COLORS, NEON_SHADOWS } from '../constants/theme';
 import { useStore } from '../store/useStore';
+import { useTheme } from '../hooks/useTheme';
 
 // Required for proper OAuth handling
 WebBrowser.maybeCompleteAuthSession();
@@ -12,6 +13,7 @@ WebBrowser.maybeCompleteAuthSession();
 export const AuthScreen = () => {
     const [loading, setLoading] = useState(false);
     const { setGuest, setSession } = useStore();
+    const { colors } = useTheme();
 
     // Generate redirect URI for OAuth
     const redirectUri = AuthSession.makeRedirectUri({
@@ -118,11 +120,11 @@ export const AuthScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
             {/* Cyberpunk Header */}
             <View style={styles.headerContainer}>
                 <Text style={styles.systemLabel}>// AUTHENTICATION REQUIRED //</Text>
-                <Text style={styles.title}>Initialize Agent</Text>
+                <Text style={[styles.title, NEON_SHADOWS.cyan]}>Initialize Agent</Text>
                 <Text style={styles.subtitle}>
                     Verify your identity to sync progress across devices
                 </Text>
@@ -130,19 +132,19 @@ export const AuthScreen = () => {
 
             <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                    style={[styles.button, styles.appleButton, loading && styles.disabledButton]}
+                    style={[styles.button, styles.appleButton, loading && styles.disabledButton, NEON_SHADOWS.subtle]}
                     disabled={loading}
                     onPress={handleAppleSignIn}
                     accessibilityRole="button"
                     accessibilityLabel="Sign in with Apple"
                 >
                     <Text style={[styles.buttonText, styles.appleText]}>
-                        Sign in with Apple
+                         Sign in with Apple
                     </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.button, styles.googleButton, loading && styles.disabledButton]}
+                    style={[styles.button, styles.googleButton, loading && styles.disabledButton, NEON_SHADOWS.cyan]}
                     disabled={loading}
                     onPress={handleGoogleSignIn}
                     accessibilityRole="button"
@@ -160,7 +162,7 @@ export const AuthScreen = () => {
                 </View>
 
                 <TouchableOpacity
-                    style={[styles.button, styles.guestButton]}
+                    style={[styles.button, styles.guestButton, NEON_SHADOWS.purple]}
                     disabled={loading}
                     onPress={() => setGuest(true)}
                     accessibilityRole="button"

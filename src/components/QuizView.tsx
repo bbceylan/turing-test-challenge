@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { COLORS, NEON_SHADOWS } from '../constants/theme';
 import { getRandomPair, TextPair } from '../utils/mockData';
 import { useStore } from '../store/useStore';
 import { useGameLogic } from '../hooks/useGameLogic';
@@ -17,6 +17,7 @@ import Animated, {
     FadeIn
 } from 'react-native-reanimated';
 import { useTheme } from '../hooks/useTheme';
+import { GameOverModal } from './GameOverModal';
 
 // ... (AnimatedScanline is here, skipping)
 
@@ -55,16 +56,24 @@ const getModelColor = (model: string, colors: any) => {
 interface QuizViewProps {
     category?: string;
     onBack?: () => void;
+    onNavigateToLeaderboard?: () => void;
 }
 
-export const QuizView: React.FC<QuizViewProps> = ({ category, onBack }) => {
+export const QuizView: React.FC<QuizViewProps> = ({ category, onBack, onNavigateToLeaderboard }) => {
     const {
         currentPair,
         options,
         revealed,
         selectedIndex,
         nextQuestion,
-        submitGuess
+        submitGuess,
+        gameOver,
+        sessionStreak,
+        sessionXp,
+        streakBeforeGameOver,
+        isNewRecord,
+        resetGame,
+        maxStreak,
     } = useGameLogic(category);
     const { stats } = useStore();
     const { colors } = useTheme();
@@ -113,10 +122,30 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack }) => {
         }
     };
 
+    const handleTryAgain = () => {
+        resetGame();
+    };
+
+    const handleViewLeaderboard = () => {
+        resetGame();
+        if (onNavigateToLeaderboard) {
+            onNavigateToLeaderboard();
+        }
+    };
+
     if (!currentPair) return null;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+            <GameOverModal
+                visible={gameOver}
+                sessionStreak={streakBeforeGameOver}
+                maxStreak={maxStreak}
+                sessionXp={sessionXp}
+                isNewRecord={isNewRecord || streakBeforeGameOver === maxStreak}
+                onTryAgain={handleTryAgain}
+                onViewLeaderboard={handleViewLeaderboard}
+            />
             <AnimatedScanline />
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
@@ -128,7 +157,11 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack }) => {
                         )}
                         <Text style={[styles.category, { color: colors.text.accent }]}>{currentPair.category}</Text>
                     </View>
-                    <Text style={[styles.streak, { color: colors.text.highlight }]}>Streak: {stats.currentStreak}</Text>
+                    <Text style={[
+                        styles.streak,
+                        { color: colors.text.highlight },
+                        stats.currentStreak >= 5 && NEON_SHADOWS.pink
+                    ]}>Streak: {stats.currentStreak}</Text>
                 </View>
 
                 <Text style={styles.prompt}>Which one is {currentPair.aiModel}?</Text>
@@ -195,7 +228,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack }) => {
 
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
-                            style={[styles.shareButton, { borderColor: colors.border.primary }]}
+                            style={[styles.shareButton, { borderColor: colors.border.default }]}
                             onPress={handleShare}
                             accessibilityRole="button"
                             accessibilityLabel="Share Result"

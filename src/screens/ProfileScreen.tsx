@@ -4,6 +4,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useStore } from '../store/useStore';
 import { supabase } from '../utils/supabase';
 import { User, Edit3, Check, X, Share2 } from 'lucide-react-native';
+import { COLORS, NEON_SHADOWS } from '../constants/theme';
 
 export const ProfileScreen = () => {
     const { stats, session, user, isGuest, setGuest, isPro } = useStore();
@@ -111,8 +112,8 @@ export const ProfileScreen = () => {
             <Text style={[styles.title, { color: colors.text.accent }]}>Agent Profile</Text>
 
             <View style={[styles.profileHeader, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
-                <View style={[styles.avatarContainer, { backgroundColor: colors.background.secondary, borderColor: colors.border.success }]}>
-                    <User color={colors.text.accent} size={40} />
+                <View style={[styles.avatarContainer, { backgroundColor: colors.background.secondary, borderColor: COLORS.neonCyan }, NEON_SHADOWS.cyan]}>
+                    <User color={COLORS.neonCyan} size={40} />
                 </View>
                 <View style={styles.profileInfo}>
                     {isEditing ? (
@@ -143,13 +144,13 @@ export const ProfileScreen = () => {
             </View>
 
             <View style={styles.statsContainer}>
-                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: COLORS.neonPurple }, NEON_SHADOWS.subtle]}>
                     <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Total XP</Text>
-                    <Text style={[styles.statValue, { color: colors.text.primary }]}>{stats.totalXp}</Text>
+                    <Text style={[styles.statValue, { color: COLORS.neonPurple }]}>{stats.totalXp}</Text>
                 </View>
-                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: COLORS.sunsetOrange }, NEON_SHADOWS.subtle]}>
                     <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Best Streak</Text>
-                    <Text style={[styles.statValue, { color: colors.text.primary }]}>{stats.maxStreak}</Text>
+                    <Text style={[styles.statValue, { color: COLORS.sunsetOrange }]}>{stats.maxStreak}</Text>
                 </View>
             </View>
 

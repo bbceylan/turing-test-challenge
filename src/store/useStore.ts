@@ -91,11 +91,12 @@ export const useStore = create<AppState>((set, get) => ({
                 .upsert({
                     id: session.user.id,
                     total_xp: stats.totalXp,
+                    max_streak: stats.maxStreak,
                     updated_at: new Date().toISOString(),
                 });
 
             if (error) throw error;
-            console.log('Stats synced to Supabase');
+            console.log('Stats synced to Supabase (XP:', stats.totalXp, 'Max Streak:', stats.maxStreak, ')');
         } catch (error) {
             console.error('Error syncing stats:', error);
         }

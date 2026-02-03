@@ -23,11 +23,13 @@ jest.mock('../../utils/mockData', () => ({
 
 describe('useGameLogic', () => {
     const mockAddXp = jest.fn();
+    const mockStats = { totalXp: 100, currentStreak: 5, maxStreak: 10 };
 
     beforeEach(() => {
         jest.clearAllMocks();
         (useStore as unknown as jest.Mock).mockReturnValue({
-            addXp: mockAddXp
+            addXp: mockAddXp,
+            stats: mockStats
         });
     });
 
@@ -43,24 +45,14 @@ describe('useGameLogic', () => {
         });
         expect(result.current.options).toHaveLength(2);
         expect(result.current.revealed).toBe(false);
+        expect(result.current.gameOver).toBe(false);
+        expect(result.current.sessionStreak).toBe(0);
+        expect(result.current.sessionXp).toBe(0);
     });
 
-    it('handles correct guess', () => {
+    it('handles correct guess and increments session streak', () => {
         const { result } = renderHook(() => useGameLogic());
-        const humanIndex = result.current.options.findIndex(o => o.isHuman);
-
-        act(() => {
-            result.current.submitGuess(humanIndex);
-        });
-
-        expect(result.current.revealed).toBe(true);
-        expect(result.current.selectedIndex).toBe(humanIndex);
-        expect(mockAddXp).toHaveBeenCalledWith(10, true);
-        expect(showInterstitialIfReady).toHaveBeenCalled();
-    });
-
-    it('handles incorrect guess', () => {
-        const { result } = renderHook(() => useGameLogic());
+        // Find AI option (correct guess = selecting AI)
         const aiIndex = result.current.options.findIndex(o => !o.isHuman);
 
         act(() => {
@@ -68,17 +60,35 @@ describe('useGameLogic', () => {
         });
 
         expect(result.current.revealed).toBe(true);
+        expect(result.current.selectedIndex).toBe(aiIndex);
+        expect(result.current.gameOver).toBe(false);
+        expect(result.current.sessionStreak).toBe(1);
+        expect(mockAddXp).toHaveBeenCalledWith(10, true);
+        expect(showInterstitialIfReady).toHaveBeenCalled();
+    });
+
+    it('handles incorrect guess and triggers game over', () => {
+        const { result } = renderHook(() => useGameLogic());
+        // Find human option (incorrect guess = selecting human)
+        const humanIndex = result.current.options.findIndex(o => o.isHuman);
+
+        act(() => {
+            result.current.submitGuess(humanIndex);
+        });
+
+        expect(result.current.revealed).toBe(true);
+        expect(result.current.gameOver).toBe(true);
         expect(mockAddXp).toHaveBeenCalledWith(10, false);
-        // Note: verify if false means 0 XP or penalty. 
-        // Looking at logic: addXp(10, isCorrect). If isCorrect false, logic inside store decides.
     });
 
     it('loads next question', () => {
         const { result } = renderHook(() => useGameLogic());
+        // Find AI option for correct guess
+        const aiIndex = result.current.options.findIndex(o => !o.isHuman);
 
-        // First submit guess to reveal
+        // First submit correct guess to reveal
         act(() => {
-            result.current.submitGuess(0);
+            result.current.submitGuess(aiIndex);
         });
         expect(result.current.revealed).toBe(true);
 
@@ -89,5 +99,26 @@ describe('useGameLogic', () => {
 
         expect(result.current.revealed).toBe(false);
         expect(result.current.selectedIndex).toBeNull();
+    });
+
+    it('resets game state correctly', () => {
+        const { result } = renderHook(() => useGameLogic());
+        const humanIndex = result.current.options.findIndex(o => o.isHuman);
+
+        // Trigger game over
+        act(() => {
+            result.current.submitGuess(humanIndex);
+        });
+        expect(result.current.gameOver).toBe(true);
+
+        // Reset game
+        act(() => {
+            result.current.resetGame();
+        });
+
+        expect(result.current.gameOver).toBe(false);
+        expect(result.current.sessionStreak).toBe(0);
+        expect(result.current.sessionXp).toBe(0);
+        expect(result.current.revealed).toBe(false);
     });
 });

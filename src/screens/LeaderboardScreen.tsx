@@ -4,30 +4,63 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../utils/supabase';
 import { useStore } from '../store/useStore';
-import { Globe, Calendar, Lock } from 'lucide-react-native';
+import { Globe, Calendar, Lock, Flame } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Skeleton } from '../components/Skeleton';
+import { COLORS, NEON_SHADOWS } from '../constants/theme';
 
 interface Player {
     id: string;
     username: string;
     total_xp: number;
+    max_streak?: number;
 }
 
-type Tab = 'GLOBAL' | 'WEEKLY';
+type Tab = 'GLOBAL' | 'WEEKLY' | 'STREAKS';
+
+// Rank badge colors for top 3
+const getRankStyle = (index: number) => {
+    if (index === 0) return { color: '#FFD700', ...NEON_SHADOWS.pink }; // Gold
+    if (index === 1) return { color: '#C0C0C0' }; // Silver
+    if (index === 2) return { color: '#CD7F32' }; // Bronze
+    return {};
+};
 
 // Extracted & Memoized Item Component for Performance
-const LeaderboardItem = React.memo(({ item, index, colors }: { item: Player; index: number, colors: any }) => (
+const LeaderboardItem = React.memo(({ item, index, colors, showStreak }: { item: Player; index: number, colors: any, showStreak?: boolean }) => (
     <Animated.View
         entering={FadeInDown.delay(index * 50).springify()}
-        style={[styles.row, {
-            backgroundColor: colors.background.card,
-            borderColor: colors.border.default
-        }]}
+        style={[
+            styles.row,
+            {
+                backgroundColor: colors.background.card,
+                borderColor: index < 3 ? COLORS.neonPurple : colors.border.default
+            },
+            index < 3 && NEON_SHADOWS.subtle
+        ]}
     >
-        <Text style={[styles.rank, { color: colors.text.accent }]}>#{index + 1}</Text>
-        <Text style={[styles.name, { color: colors.text.primary }]}>{item.username || 'Anonymous Agent'}</Text>
-        <Text style={[styles.xp, { color: colors.text.highlight }]}>{item.total_xp} XP</Text>
+        <View style={[styles.rankBadge, index < 3 && { backgroundColor: 'rgba(110, 44, 243, 0.2)' }]}>
+            <Text style={[styles.rank, { color: colors.text.accent }, getRankStyle(index)]}>
+                #{index + 1}
+            </Text>
+        </View>
+        <View style={styles.playerInfo}>
+            <Text style={[styles.name, { color: colors.text.primary }]}>{item.username || 'Anonymous Agent'}</Text>
+            {showStreak && item.max_streak !== undefined && (
+                <Text style={[styles.secondaryInfo, { color: colors.text.secondary }]}>
+                    {item.total_xp} XP
+                </Text>
+            )}
+            {!showStreak && item.max_streak !== undefined && item.max_streak > 0 && (
+                <Text style={[styles.secondaryInfo, { color: colors.text.secondary }]}>
+                    Best: {item.max_streak}
+                </Text>
+            )}
+        </View>
+        <Text style={[styles.xp, { color: showStreak ? COLORS.sunsetOrange : colors.text.highlight }]}>
+            {showStreak ? `${item.max_streak || 0}` : `${item.total_xp} XP`}
+        </Text>
+        {showStreak && <Flame size={16} color={COLORS.sunsetOrange} style={{ marginLeft: 4 }} />}
     </Animated.View>
 ));
 
@@ -49,11 +82,21 @@ export const LeaderboardScreen = () => {
 
         setError(null);
         try {
-            const query = supabase
-                .from('profiles')
-                .select('id, username, total_xp')
-                .order('total_xp', { ascending: false })
-                .limit(activeTab === 'GLOBAL' ? 50 : 10);
+            let query;
+
+            if (activeTab === 'STREAKS') {
+                query = supabase
+                    .from('profiles')
+                    .select('id, username, total_xp, max_streak')
+                    .order('max_streak', { ascending: false })
+                    .limit(50);
+            } else {
+                query = supabase
+                    .from('profiles')
+                    .select('id, username, total_xp, max_streak')
+                    .order('total_xp', { ascending: false })
+                    .limit(activeTab === 'GLOBAL' ? 50 : 10);
+            }
 
             const { data, error } = await query;
 
@@ -86,7 +129,7 @@ export const LeaderboardScreen = () => {
                     setActiveTab('GLOBAL');
                 }}
             >
-                <Globe size={20} color={activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary} />
+                <Globe size={18} color={activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary }]}>Global</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -96,8 +139,18 @@ export const LeaderboardScreen = () => {
                     setActiveTab('WEEKLY');
                 }}
             >
-                <Calendar size={20} color={activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary} />
+                <Calendar size={18} color={activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary }]}>Weekly</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={[styles.tab, activeTab === 'STREAKS' && { backgroundColor: colors.border.default }]}
+                onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveTab('STREAKS');
+                }}
+            >
+                <Flame size={18} color={activeTab === 'STREAKS' ? COLORS.sunsetOrange : colors.text.secondary} />
+                <Text style={[styles.tabText, { color: activeTab === 'STREAKS' ? COLORS.sunsetOrange : colors.text.secondary }]}>Streaks</Text>
             </TouchableOpacity>
         </View>
     );
@@ -151,7 +204,7 @@ export const LeaderboardScreen = () => {
                         <Text style={[styles.emptySubText, { color: colors.text.secondary }]}>Be the first to sync your XP!</Text>
                     </View>
                 }
-                renderItem={({ item, index }) => <LeaderboardItem item={item} index={index} colors={colors} />}
+                renderItem={({ item, index }) => <LeaderboardItem item={item} index={index} colors={colors} showStreak={activeTab === 'STREAKS'} />}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 initialNumToRender={10}
                 maxToRenderPerBatch={10}
@@ -230,14 +283,28 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         borderWidth: 1,
     },
-    rank: {
-        fontSize: 18,
-        fontWeight: 'bold',
+    rankBadge: {
         width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    rank: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    playerInfo: {
+        flex: 1,
     },
     name: {
         fontSize: 16,
-        flex: 1,
+        fontWeight: '500',
+    },
+    secondaryInfo: {
+        fontSize: 12,
+        marginTop: 2,
     },
     xp: {
         fontSize: 16,
