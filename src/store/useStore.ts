@@ -102,31 +102,12 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     addXp: async (xp: number, correct: boolean) => {
-        const { stats, syncStatsToRemote, session, isGuest } = get();
-        const db = await getDb();
-
+        const { stats, session, isGuest, syncStatsToRemote } = get();
         const newXp = stats.totalXp + (correct ? xp : 0);
         const newStreak = correct ? stats.currentStreak + 1 : 0;
         const newMaxStreak = Math.max(stats.maxStreak, newStreak);
 
-        // Milestone checks
-        const checkMilestones = async (xp: number, streak: number) => {
-            if (streak === 5) {
-                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "streak_5" AND completed_at IS NULL');
-            }
-            if (xp >= 100) {
-                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "total_100_xp" AND completed_at IS NULL');
-            }
-            await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "first_guess" AND completed_at IS NULL');
-        };
-
-        await checkMilestones(newXp, newStreak);
-
-        await db.runAsync(
-            'UPDATE user_stats SET total_xp = ?, current_streak = ?, max_streak = ?, last_played_at = CURRENT_TIMESTAMP WHERE id = 1',
-            [newXp, newStreak, newMaxStreak]
-        );
-
+        // OPTIMISTIC UPDATE: Update UI immediately
         set({
             stats: {
                 totalXp: newXp,
@@ -134,6 +115,88 @@ export const useStore = create<AppState>((set, get) => ({
                 maxStreak: newMaxStreak,
             }
         });
+
+        // Background: Handle DB and Milestones
+        const db = await getDb();
+
+        // Milestone checks - comprehensive achievement system
+        const checkMilestones = async (xp: number, streak: number, maxStreak: number) => {
+            // First guess (always check)
+            await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "first_guess" AND completed_at IS NULL');
+
+            // Streak achievements
+            const streakThresholds = [3, 5, 10, 25, 50, 100];
+            for (const threshold of streakThresholds) {
+                if (maxStreak >= threshold) {
+                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "streak_${threshold}" AND completed_at IS NULL`);
+                }
+            }
+
+            // XP achievements
+            const xpThresholds = [100, 500, 1000, 5000, 10000];
+            for (const threshold of xpThresholds) {
+                if (xp >= threshold) {
+                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "total_${threshold}_xp" AND completed_at IS NULL`);
+                }
+            }
+
+            // Correct guesses achievements (query from DB)
+            const correctResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM quiz_results WHERE is_correct = 1');
+            const correctCount = correctResult?.count || 0;
+            const correctThresholds = [10, 50, 100, 500, 1000];
+            for (const threshold of correctThresholds) {
+                if (correctCount >= threshold) {
+                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "correct_${threshold}" AND completed_at IS NULL`);
+                }
+            }
+
+            // Session streak (current session)
+            const sessionThresholds = [5, 10, 20];
+            for (const threshold of sessionThresholds) {
+                if (streak >= threshold) {
+                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "perfect_session_${threshold}" AND completed_at IS NULL`);
+                }
+            }
+
+            // Combo: streak + XP
+            if (maxStreak >= 10 && xp >= 500) {
+                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "streak_and_xp" AND completed_at IS NULL');
+            }
+
+            // Comeback kid: currently at 10+ streak
+            if (streak >= 10) {
+                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "comeback_kid" AND completed_at IS NULL');
+            }
+
+            // Check category-specific achievements
+            const categories = ['Literature', 'Science', 'Philosophy', 'History', 'Fantasy', 'Pop Culture'];
+            const categoryIds = ['literature', 'science', 'philosophy', 'history', 'fantasy', 'popculture'];
+            for (let i = 0; i < categories.length; i++) {
+                const cat = categories[i];
+                const catId = categoryIds[i];
+                const catResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM quiz_results WHERE is_correct = 1 AND category = ?', [cat]);
+                const catCount = catResult?.count || 0;
+                if (catCount >= 10) {
+                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "${catId}_10" AND completed_at IS NULL`);
+                }
+                if (catCount >= 50) {
+                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "${catId}_50" AND completed_at IS NULL`);
+                }
+            }
+
+            // Grandmaster: check if 20+ achievements unlocked
+            const unlockedResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM milestones WHERE completed_at IS NOT NULL AND id != "grandmaster"');
+            if ((unlockedResult?.count || 0) >= 20) {
+                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "grandmaster" AND completed_at IS NULL');
+            }
+        };
+
+        await checkMilestones(newXp, newStreak, newMaxStreak);
+
+        await db.runAsync(
+            'UPDATE user_stats SET total_xp = ?, current_streak = ?, max_streak = ?, last_played_at = CURRENT_TIMESTAMP WHERE id = 1',
+            [newXp, newStreak, newMaxStreak]
+        );
 
         updateWidgetData({ currentStreak: newStreak, totalXp: newXp });
 

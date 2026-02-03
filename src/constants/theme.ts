@@ -43,9 +43,9 @@ export const SEMANTIC_COLORS = {
 export const CATEGORIES = [
     'Literature',
     'Philosophy',
-    'Poetry',
+    'Religious',
+    'Fantasy',
     'Horror',
-    'Romance',
 ];
 
 export const XP_VALUES = {

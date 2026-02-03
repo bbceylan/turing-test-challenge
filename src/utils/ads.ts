@@ -6,6 +6,7 @@ const adUnitId = (__DEV__ && TestIds) ? TestIds.INTERSTITIAL : 'YOUR_REAL_AD_UNI
 
 let interstitial: any = null;
 let guessCount = 0;
+let lastAdTime = Date.now(); // Track time for ad frequency
 
 export const loadInterstitial = () => {
     if (Constants.appOwnership === 'expo' || !InterstitialAd) return;
@@ -28,8 +29,16 @@ export const showInterstitialIfReady = () => {
     if (isPro || Constants.appOwnership === 'expo' || !interstitial) return;
 
     guessCount++;
-    if (guessCount % 10 === 0 && interstitial?.loaded) {
+    const now = Date.now();
+    const timeSinceLastAd = now - lastAdTime;
+
+    // Show ad if: 3 questions answered OR 60 seconds passed
+    if ((guessCount >= 3 || timeSinceLastAd >= 60000) && interstitial?.loaded) {
         interstitial.show();
         loadInterstitial(); // Preload next
+
+        // Reset counters only if ad is shown
+        guessCount = 0;
+        lastAdTime = Date.now();
     }
 };

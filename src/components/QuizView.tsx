@@ -188,14 +188,6 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, onBack }) => {
 
             {revealed && (
                 <Animated.View entering={FadeIn.duration(300)} style={styles.actions}>
-                    <View style={styles.resultContainer}>
-                        <Text style={[
-                            styles.resultTitle,
-                            { color: !options[selectedIndex!].isHuman ? colors.text.accent : colors.text.highlight }
-                        ]}>
-                            {!options[selectedIndex!].isHuman ? "Correct! You spotted the AI." : "Oops! That was written by a human."}
-                        </Text>
-                    </View>
                     <View style={styles.modelReveal}>
                         <Text style={styles.modelLabel}>Model used:</Text>
                         <Text style={[styles.modelName, { color: colors.text.primary }]}>{currentPair.aiModel}</Text>

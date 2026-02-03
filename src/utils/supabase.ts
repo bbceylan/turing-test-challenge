@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// These should be replaced with actual environment variables
-const SUPABASE_URL = 'https://placeholder-project.supabase.co'; // Must be valid URL format
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'; // Dummy JWT format
+const SUPABASE_URL = 'https://idhpvkckcsuocwvviiie.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_vmNAxjHT1y3mLUMeOZOrnw_4XXmK6Zp';
 
-const isPlaceholder = SUPABASE_URL === 'https://placeholder-project.supabase.co';
+// iOS Google OAuth Client ID: 800000881598-2m7hbnlagqgp9637e7oa652uq0936n33.apps.googleusercontent.com
+// Add this to Supabase Dashboard → Authentication → Providers → Google → Client IDs
 
-export const supabase = createClient(
-    isPlaceholder ? 'https://example.supabase.co' : SUPABASE_URL,
-    isPlaceholder ? 'placeholder' : SUPABASE_ANON_KEY
-);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+

@@ -8,6 +8,11 @@ import { COLORS } from '../constants/theme';
 export const PlayScreen = () => {
     const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
 
+    React.useEffect(() => {
+        // Load the first interstitial when the screen mounts
+        import('../utils/ads').then(mod => mod.loadInterstitial());
+    }, []);
+
     return (
         <View style={styles.container}>
             {!selectedCategory ? (

@@ -13,12 +13,24 @@ if (!hasNativeAdMob) {
     // Mock for Environments without the native module (Expo Go, etc.)
     AdMobModule = {
         InterstitialAd: {
-            createForAdRequest: () => ({
-                addAdEventListener: () => { },
-                load: () => { },
-                show: () => { },
-                loaded: false,
-            }),
+            createForAdRequest: () => {
+                let listeners: any = {};
+                return {
+                    addAdEventListener: (event: string, cb: any) => { listeners[event] = cb; },
+                    load: () => {
+                        // Simulate load delay
+                        setTimeout(() => {
+                            if (listeners['loaded']) listeners['loaded']();
+                        }, 500);
+                    },
+                    show: () => {
+                        // Mock visible ad
+                        const { Alert } = require('react-native');
+                        Alert.alert("Ad Break (Mock)", "This is a simulated interstitial ad.");
+                    },
+                    loaded: true,
+                };
+            },
         },
         AdEventType: {
             LOADED: 'loaded',
@@ -27,7 +39,15 @@ if (!hasNativeAdMob) {
             INTERSTITIAL: 'test-id',
             BANNER: 'test-id',
         },
-        BannerAd: () => null,
+        BannerAd: () => {
+            const React = require('react');
+            const { View, Text } = require('react-native');
+            return React.createElement(View, {
+                style: { width: 320, height: 50, backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ccc' }
+            }, React.createElement(Text, {
+                style: { color: '#666', fontSize: 12 }
+            }, "Mock Banner Ad"));
+        },
         BannerAdSize: {
             ANCHORED_ADAPTIVE_BANNER: 'banner',
         },
