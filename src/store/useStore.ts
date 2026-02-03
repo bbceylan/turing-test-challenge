@@ -26,6 +26,9 @@ interface AppState {
     user: User | null;
     session: Session | null;
     friendCode: string | null;
+    rewardedReady: boolean;
+    qaOverlay: boolean;
+    forceMockAds: boolean;
     loadStats: () => Promise<void>;
     addXp: (xp: number, correct: boolean) => Promise<void>;
     addXpWithOptions: (xp: number, correct: boolean, options?: { preserveStreak?: boolean }) => Promise<void>;
@@ -38,6 +41,9 @@ interface AppState {
     setIsPro: (isPro: boolean) => void;
     setAdFreeUntil: (timestamp: number | null) => void;
     grantAdFreeMinutes: (minutes: number) => void;
+    setRewardedReady: (ready: boolean) => void;
+    setQaOverlay: (visible: boolean) => void;
+    setForceMockAds: (enabled: boolean) => void;
     mergeLocalWithRemote: () => Promise<void>;
     enqueueStatSync: () => Promise<void>;
     processSyncQueue: () => Promise<void>;
@@ -71,6 +77,9 @@ export const useStore = create<AppState>((set, get) => ({
     user: null,
     session: null,
     friendCode: null,
+    rewardedReady: false,
+    qaOverlay: false,
+    forceMockAds: false,
 
     setIsPro: (isPro) => set({ isPro }),
     setAdFreeUntil: (timestamp) => {
@@ -84,6 +93,9 @@ export const useStore = create<AppState>((set, get) => ({
         set({ adFreeUntil: next });
         getDb().then(db => db.runAsync('UPDATE user_stats SET ad_free_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1', [next]));
     },
+    setRewardedReady: (ready) => set({ rewardedReady: ready }),
+    setQaOverlay: (visible) => set({ qaOverlay: visible }),
+    setForceMockAds: (enabled) => set({ forceMockAds: enabled }),
 
     setGuest: (isGuest) => set({ isGuest }),
 
@@ -114,6 +126,12 @@ export const useStore = create<AppState>((set, get) => ({
         const db = await getDb();
         const stats: any = await db.getFirstAsync('SELECT * FROM user_stats WHERE id = 1');
         if (stats) {
+            let friendCode = stats.friend_code ?? null;
+            if (!friendCode) {
+                const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+                friendCode = `GUEST-${rand}`;
+                await db.runAsync('UPDATE user_stats SET friend_code = ? WHERE id = 1', [friendCode]);
+            }
             set({
                 stats: {
                     totalXp: stats.total_xp,
@@ -127,7 +145,7 @@ export const useStore = create<AppState>((set, get) => ({
                 },
                 isLoading: false,
                 adFreeUntil: stats.ad_free_until ?? null,
-                friendCode: stats.friend_code ?? null,
+                friendCode,
             });
         }
     },

@@ -57,6 +57,8 @@ const LeaderboardItem = React.memo(({ item, index, colors, mode, total }: { item
             },
             index < 3 && NEON_SHADOWS.subtle
         ]}
+        accessible
+        accessibilityLabel={`Rank ${index + 1}. ${item.username || 'Anonymous Agent'}. ${showStreak ? `Best streak ${item.max_streak || 0}` : xpLabel}`}
     >
         <View style={[styles.rankBadge, index < 3 && { backgroundColor: 'rgba(110, 44, 243, 0.2)' }]}>
             <Text style={[styles.rank, { color: colors.text.accent }, getRankStyle(index)]}>
@@ -196,6 +198,9 @@ export const LeaderboardScreen = () => {
                     Haptics.selectionAsync();
                     setActiveTab('GLOBAL');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Global leaderboard tab"
+                accessibilityState={{ selected: activeTab === 'GLOBAL' }}
             >
                 <Globe size={18} color={activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'GLOBAL' ? colors.text.primary : colors.text.secondary }]}>Global</Text>
@@ -206,6 +211,9 @@ export const LeaderboardScreen = () => {
                     Haptics.selectionAsync();
                     setActiveTab('WEEKLY');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Weekly leaderboard tab"
+                accessibilityState={{ selected: activeTab === 'WEEKLY' }}
             >
                 <Calendar size={18} color={activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'WEEKLY' ? colors.text.primary : colors.text.secondary }]}>Weekly</Text>
@@ -216,6 +224,9 @@ export const LeaderboardScreen = () => {
                     Haptics.selectionAsync();
                     setActiveTab('SEASON');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Season leaderboard tab"
+                accessibilityState={{ selected: activeTab === 'SEASON' }}
             >
                 <Crown size={18} color={activeTab === 'SEASON' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'SEASON' ? colors.text.primary : colors.text.secondary }]}>Season</Text>
@@ -226,6 +237,9 @@ export const LeaderboardScreen = () => {
                     Haptics.selectionAsync();
                     setActiveTab('STREAKS');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Streaks leaderboard tab"
+                accessibilityState={{ selected: activeTab === 'STREAKS' }}
             >
                 <Flame size={18} color={activeTab === 'STREAKS' ? COLORS.sunsetOrange : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'STREAKS' ? COLORS.sunsetOrange : colors.text.secondary }]}>Streaks</Text>
@@ -236,6 +250,9 @@ export const LeaderboardScreen = () => {
                     Haptics.selectionAsync();
                     setActiveTab('FRIENDS');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Friends leaderboard tab"
+                accessibilityState={{ selected: activeTab === 'FRIENDS' }}
             >
                 <Users size={18} color={activeTab === 'FRIENDS' ? colors.text.primary : colors.text.secondary} />
                 <Text style={[styles.tabText, { color: activeTab === 'FRIENDS' ? colors.text.primary : colors.text.secondary }]}>Friends</Text>
@@ -298,6 +315,7 @@ export const LeaderboardScreen = () => {
                                     value={friendInput}
                                     onChangeText={setFriendInput}
                                     autoCapitalize="characters"
+                                    accessibilityLabel="Friend code input"
                                 />
                                 <TouchableOpacity
                                     style={[styles.friendButton, { borderColor: colors.text.highlight }]}

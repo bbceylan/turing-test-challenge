@@ -182,6 +182,12 @@ export const useGameLogic = (category?: string, mode: GameMode = 'STANDARD', cat
     const useShield = async () => {
         if (stats.streakShields <= 0) return;
         await consumeShield();
+        try {
+            const db = await getDb();
+            await db.runAsync('DELETE FROM quiz_results WHERE id = (SELECT id FROM quiz_results ORDER BY id DESC LIMIT 1)');
+        } catch {
+            // Ignore cleanup failure
+        }
         await addXpWithOptions(0, false, { preserveStreak: true });
         setPendingShield(false);
     };

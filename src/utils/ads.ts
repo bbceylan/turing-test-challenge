@@ -16,8 +16,19 @@ const isAdFreeActive = () => {
     return isPro || (!!adFreeUntil && adFreeUntil > Date.now());
 };
 
+const shouldUseMockAds = () => {
+    const { forceMockAds } = useStore.getState();
+    return __DEV__ && forceMockAds;
+};
+
 export const loadInterstitial = () => {
-    if (Constants.appOwnership === 'expo' || !InterstitialAd) return;
+    if (!__DEV__ && Constants.appOwnership === 'expo') return;
+    if (shouldUseMockAds()) {
+        interstitial = InterstitialAd?.createForAdRequest?.(TestIds.INTERSTITIAL);
+        interstitial?.load?.();
+        return;
+    }
+    if (!InterstitialAd) return;
     if (isAdFreeActive()) return;
 
     interstitial = InterstitialAd.createForAdRequest(adUnitId, {
@@ -32,7 +43,14 @@ export const loadInterstitial = () => {
 };
 
 export const showInterstitialIfReady = () => {
-    if (isAdFreeActive() || Constants.appOwnership === 'expo' || !interstitial) return;
+    if (isAdFreeActive()) return;
+    if (!__DEV__ && Constants.appOwnership === 'expo') return;
+    if (!interstitial) return;
+    if (shouldUseMockAds()) {
+        interstitial?.show?.();
+        loadInterstitial();
+        return;
+    }
 
     guessCount++;
     const now = Date.now();
@@ -50,28 +68,50 @@ export const showInterstitialIfReady = () => {
 };
 
 export const loadRewarded = () => {
-    if (Constants.appOwnership === 'expo' || !RewardedAd) return;
+    if (!__DEV__ && Constants.appOwnership === 'expo') return;
+    if (shouldUseMockAds()) {
+        rewarded = RewardedAd?.createForAdRequest?.(TestIds.REWARDED);
+        rewarded?.addAdEventListener?.(RewardedAdEventType?.EARNED_REWARD || 'earned_reward', () => {
+            useStore.getState().grantAdFreeMinutes(60);
+            useStore.getState().setRewardedReady(false);
+        });
+        rewarded?.load?.();
+        useStore.getState().setRewardedReady(true);
+        return;
+    }
+    if (!RewardedAd) return;
     if (isAdFreeActive()) return;
 
+    useStore.getState().setRewardedReady(false);
     rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
         requestNonPersonalizedAdsOnly: true,
     });
 
     rewarded.addAdEventListener(RewardedAdEventType?.LOADED || 'loaded', () => {
         console.log('Rewarded Loaded');
+        useStore.getState().setRewardedReady(true);
     });
 
     rewarded.addAdEventListener(RewardedAdEventType?.EARNED_REWARD || 'earned_reward', () => {
         useStore.getState().grantAdFreeMinutes(60);
+        useStore.getState().setRewardedReady(false);
     });
 
     rewarded.load();
 };
 
 export const showRewardedIfReady = () => {
-    if (isAdFreeActive() || Constants.appOwnership === 'expo' || !rewarded) return false;
+    if (isAdFreeActive()) return false;
+    if (!__DEV__ && Constants.appOwnership === 'expo') return false;
+    if (!rewarded) return false;
+    if (shouldUseMockAds()) {
+        rewarded?.show?.();
+        loadRewarded();
+        return true;
+    }
     if (rewarded?.loaded) {
         rewarded.show();
+        useStore.getState().setRewardedReady(false);
         loadRewarded();
         return true;
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Modal } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Modal, Alert } from 'react-native';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
 import { useStore } from '../store/useStore';
 import { useGameLogic } from '../hooks/useGameLogic';
@@ -88,7 +88,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
         roundsPlayed,
         ghostCorrect,
     } = useGameLogic(category, mode, categories, roundLimit);
-    const { stats, isGuest, setGuest, isPro, adFreeUntil } = useStore();
+    const { stats, isGuest, setGuest, isPro, adFreeUntil, rewardedReady } = useStore();
     const { colors } = useTheme();
     const navigation = useNavigation();
     const [hint, setHint] = useState<string>('');
@@ -159,6 +159,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
         const shown = showRewardedIfReady();
         if (!shown) {
             loadRewarded();
+            Alert.alert('Loading Ad', 'Ad is loading. Please try again in a moment.');
         }
     };
 
@@ -269,6 +270,9 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
                                 onPress={() => !revealed && handleGuess(index)}
                                 disabled={revealed || (mode === 'DAILY' && dailyStatus?.completed)}
                                 activeOpacity={0.8}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Option ${index === 0 ? 'A' : 'B'}`}
+                                accessibilityHint="Select the text you believe is AI-written"
                             >
                                 <Text style={styles.text}>{option.text}</Text>
                                 {revealed && (
@@ -343,10 +347,20 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
                         <Text style={styles.shieldTitle}>Shield Protocol</Text>
                         <Text style={styles.shieldSub}>Spend 1 shield to keep your streak alive?</Text>
                         <View style={styles.shieldButtons}>
-                            <TouchableOpacity style={[styles.shieldButton, styles.shieldPrimary]} onPress={useShield}>
+                            <TouchableOpacity
+                                style={[styles.shieldButton, styles.shieldPrimary]}
+                                onPress={useShield}
+                                accessibilityRole="button"
+                                accessibilityLabel="Use shield to keep streak"
+                            >
                                 <Text style={styles.shieldPrimaryText}>Use Shield</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.shieldButton, styles.shieldSecondary]} onPress={declineShield}>
+                            <TouchableOpacity
+                                style={[styles.shieldButton, styles.shieldSecondary]}
+                                onPress={declineShield}
+                                accessibilityRole="button"
+                                accessibilityLabel="End run without using shield"
+                            >
                                 <Text style={styles.shieldSecondaryText}>End Run</Text>
                             </TouchableOpacity>
                         </View>

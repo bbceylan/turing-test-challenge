@@ -58,7 +58,11 @@ describe('ProfileScreen', () => {
             session: null,
             user: null,
             setGuest: jest.fn(),
+            setSession: jest.fn(),
             isPro: false,
+            rewardedReady: true,
+            forceMockAds: false,
+            setForceMockAds: jest.fn(),
         });
 
         const { getByText } = render(<ProfileScreen />);
@@ -79,6 +83,11 @@ describe('ProfileScreen', () => {
             session: { user: { email: 'test@example.com' } },
             user: { id: 'user-123' },
             isPro: true,
+            setGuest: jest.fn(),
+            setSession: jest.fn(),
+            rewardedReady: true,
+            forceMockAds: false,
+            setForceMockAds: jest.fn(),
         });
 
         const { getByText } = render(<ProfileScreen />);
@@ -101,6 +110,11 @@ describe('ProfileScreen', () => {
             session: { user: { email: 'test@example.com' } },
             user: { id: 'user-123' },
             isPro: true, // Pro user
+            setGuest: jest.fn(),
+            setSession: jest.fn(),
+            rewardedReady: true,
+            forceMockAds: false,
+            setForceMockAds: jest.fn(),
         });
 
         const { queryByText } = render(<ProfileScreen />);
@@ -117,6 +131,11 @@ describe('ProfileScreen', () => {
             session: { user: { email: 'test@example.com' } },
             user: { id: 'user-123' },
             isPro: false, // Free user
+            setGuest: jest.fn(),
+            setSession: jest.fn(),
+            rewardedReady: true,
+            forceMockAds: false,
+            setForceMockAds: jest.fn(),
         });
 
         const { getByText } = render(<ProfileScreen />);

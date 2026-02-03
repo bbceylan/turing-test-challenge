@@ -6,6 +6,7 @@ import { useStore } from './src/store/useStore';
 import { COLORS } from './src/constants/theme';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { BlurView } from 'expo-blur';
+import { QADebugOverlay } from './src/components/QADebugOverlay';
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -116,6 +117,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      {__DEV__ && <QADebugOverlay />}
       <NavigationContainer>
         <Tab.Navigator
           screenOptions={{

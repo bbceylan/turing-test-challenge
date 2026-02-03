@@ -8,7 +8,7 @@ import { COLORS, NEON_SHADOWS } from '../constants/theme';
 import { loadRewarded, showRewardedIfReady } from '../utils/ads';
 
 export const ProfileScreen = () => {
-    const { stats, session, user, isGuest, setGuest, isPro, adFreeUntil, friendCode } = useStore();
+    const { stats, session, user, isGuest, setGuest, setSession, isPro, setIsPro, adFreeUntil, friendCode, rewardedReady, qaOverlay, setQaOverlay, forceMockAds, setForceMockAds } = useStore();
     const { colors } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [username, setUsername] = useState('');
@@ -155,6 +155,7 @@ export const ProfileScreen = () => {
         const shown = showRewardedIfReady();
         if (!shown) {
             loadRewarded();
+            Alert.alert('Loading Ad', 'Ad is loading. Please try again in a moment.');
         }
     };
 
@@ -203,11 +204,19 @@ export const ProfileScreen = () => {
             </View>
 
             <View style={styles.statsContainer}>
-                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: COLORS.neonPurple }, NEON_SHADOWS.subtle]}>
+                <View
+                    style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: COLORS.neonPurple }, NEON_SHADOWS.subtle]}
+                    accessible
+                    accessibilityLabel={`Total XP ${stats.totalXp}`}
+                >
                     <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Total XP</Text>
                     <Text style={[styles.statValue, { color: COLORS.neonPurple }]}>{stats.totalXp}</Text>
                 </View>
-                <View style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: COLORS.sunsetOrange }, NEON_SHADOWS.subtle]}>
+                <View
+                    style={[styles.statBox, { backgroundColor: colors.background.card, borderColor: COLORS.sunsetOrange }, NEON_SHADOWS.subtle]}
+                    accessible
+                    accessibilityLabel={`Best streak ${stats.maxStreak}`}
+                >
                     <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Best Streak</Text>
                     <Text style={[styles.statValue, { color: COLORS.sunsetOrange }]}>{stats.maxStreak}</Text>
                 </View>
@@ -221,7 +230,11 @@ export const ProfileScreen = () => {
                 </View>
             )}
 
-            <View style={[styles.insightsBox, { borderColor: colors.border.default }]}>
+            <View
+                style={[styles.insightsBox, { borderColor: colors.border.default }]}
+                accessible
+                accessibilityLabel={`Insights. Accuracy ${analytics.accuracy} percent. AI choice rate ${analytics.aiChoiceRate} percent.${analytics.topMissCategory ? ` Most missed ${analytics.topMissCategory}.` : ''}`}
+            >
                 <Text style={[styles.insightsTitle, { color: colors.text.primary }]}>Insights</Text>
                 <Text style={[styles.insightsText, { color: colors.text.secondary }]}>Accuracy: {analytics.accuracy}% ({analytics.total} attempts)</Text>
                 <Text style={[styles.insightsText, { color: colors.text.secondary }]}>AI Choice Rate: {analytics.aiChoiceRate}%</Text>
@@ -284,11 +297,14 @@ export const ProfileScreen = () => {
                         { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
                     ]}
                     onPress={handleWatchAd}
+                    disabled={!rewardedReady}
                     accessibilityRole="button"
                     accessibilityLabel="Watch Ad for Ad-Free Time"
                     accessibilityHint="Watch a rewarded ad for one hour of ad-free play"
                 >
-                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>Watch Ad (1h Ad-Free)</Text>
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
+                        {rewardedReady ? 'Watch Ad (1h Ad-Free)' : 'Ad Loading...'}
+                    </Text>
                 </TouchableOpacity>
             )}
 
@@ -305,6 +321,81 @@ export const ProfileScreen = () => {
             >
                 <Text style={[styles.buttonText, { color: colors.text.primary }]}>{isGuest ? 'Sign Up / Sign In' : 'Sign Out'}</Text>
             </TouchableOpacity>
+
+            {__DEV__ && (
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                    ]}
+                    onPress={() => setQaOverlay(!qaOverlay)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Toggle QA overlay"
+                >
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
+                        {qaOverlay ? 'Hide QA Overlay' : 'Show QA Overlay'}
+                    </Text>
+                </TouchableOpacity>
+            )}
+
+            {__DEV__ && (
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                    ]}
+                    onPress={() => setIsPro(!isPro)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Toggle Pro subscription"
+                    accessibilityHint="Developer toggle for testing Pro features"
+                >
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
+                        {isPro ? 'Disable Pro (Dev)' : 'Enable Pro (Dev)'}
+                    </Text>
+                </TouchableOpacity>
+            )}
+
+            {__DEV__ && (
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                    ]}
+                    onPress={() => {
+                        if (!session || isGuest) {
+                            setGuest(false);
+                            setSession({ user: { id: 'dev-user', email: 'dev@local' } } as any);
+                        } else {
+                            setSession(null);
+                            setGuest(true);
+                        }
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Toggle login state"
+                    accessibilityHint="Developer toggle for testing authenticated and guest flows"
+                >
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
+                        {session && !isGuest ? 'Set Guest (Dev)' : 'Set Logged In (Dev)'}
+                    </Text>
+                </TouchableOpacity>
+            )}
+
+            {__DEV__ && (
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                    ]}
+                    onPress={() => setForceMockAds(!forceMockAds)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Toggle mock ads"
+                    accessibilityHint="Developer toggle for forcing mock ads"
+                >
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
+                        {forceMockAds ? 'Disable Mock Ads (Dev)' : 'Enable Mock Ads (Dev)'}
+                    </Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 };

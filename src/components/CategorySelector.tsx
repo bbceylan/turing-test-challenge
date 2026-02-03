@@ -179,6 +179,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({ onSelect, on
                     activeOpacity={0.8}
                     accessibilityRole="button"
                     accessibilityLabel="Start Daily Ritual"
+                    accessibilityHint="One question with bonus XP"
                 >
                     <View style={styles.dailyCardInner}>
                         <Text style={styles.dailyLabel}>DAILY RITUAL</Text>
@@ -194,6 +195,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({ onSelect, on
                     activeOpacity={0.8}
                     accessibilityRole="button"
                     accessibilityLabel="Start Ghost Run"
+                    accessibilityHint="Ten rounds against your best score"
                 >
                     <View style={styles.dailyCardInner}>
                         <Text style={[styles.dailyLabel, { color: COLORS.neonPink }]}>GHOST RUN</Text>
@@ -213,6 +215,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({ onSelect, on
                             activeOpacity={0.8}
                             accessibilityRole="button"
                             accessibilityLabel={`Select ${pack.title} pack`}
+                            accessibilityHint={`Includes ${pack.categories.join(', ')}`}
                         >
                             <Text style={styles.packTitle}>{pack.title}</Text>
                             <Text style={styles.packSubtitle}>{pack.subtitle}</Text>
