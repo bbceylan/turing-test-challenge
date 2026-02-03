@@ -41,11 +41,11 @@ export const SEMANTIC_COLORS = {
 };
 
 export const CATEGORIES = [
+    'Literature',
     'Philosophy',
     'Poetry',
-    'Technical',
-    'Casual',
-    'Creative Writing',
+    'Horror',
+    'Romance',
 ];
 
 export const XP_VALUES = {

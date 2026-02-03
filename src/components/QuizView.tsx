@@ -7,14 +7,14 @@ import { useGameLogic } from '../hooks/useGameLogic';
 import * as Haptics from 'expo-haptics';
 import { showInterstitialIfReady } from '../utils/ads';
 import { Share } from 'react-native';
-import { Share2 } from 'lucide-react-native';
+import { Share2, ArrowLeft } from 'lucide-react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withRepeat,
     withTiming,
     Easing,
-    FadeInDown
+    FadeIn
 } from 'react-native-reanimated';
 import { useTheme } from '../hooks/useTheme';
 
@@ -52,7 +52,12 @@ const getModelColor = (model: string, colors: any) => {
     return colors.text.accent; // Default fallback
 };
 
-export const QuizView = () => {
+interface QuizViewProps {
+    category?: string;
+    onBack?: () => void;
+}
+
+export const QuizView: React.FC<QuizViewProps> = ({ category, onBack }) => {
     const {
         currentPair,
         options,
@@ -60,7 +65,7 @@ export const QuizView = () => {
         selectedIndex,
         nextQuestion,
         submitGuess
-    } = useGameLogic();
+    } = useGameLogic(category);
     const { stats } = useStore();
     const { colors } = useTheme();
 
@@ -113,93 +118,101 @@ export const QuizView = () => {
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
             <AnimatedScanline />
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={[styles.category, { color: colors.text.accent }]}>{currentPair.category}</Text>
-                <Text style={[styles.streak, { color: colors.text.highlight }]}>Streak: {stats.currentStreak}</Text>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
+                <View style={styles.header}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        {onBack && (
+                            <TouchableOpacity onPress={onBack}>
+                                <ArrowLeft color={colors.text.accent} size={24} />
+                            </TouchableOpacity>
+                        )}
+                        <Text style={[styles.category, { color: colors.text.accent }]}>{currentPair.category}</Text>
+                    </View>
+                    <Text style={[styles.streak, { color: colors.text.highlight }]}>Streak: {stats.currentStreak}</Text>
+                </View>
 
-                {options.map((option, index) => (
-                    <Animated.View key={index} style={animatedCardStyle}>
-                        <TouchableOpacity
-                            style={[
-                                styles.card,
-                                {
-                                    backgroundColor: colors.background.card,
-                                    borderColor: colors.border.default
-                                },
-                                selectedIndex === index && {
-                                    borderColor: colors.border.active,
-                                    borderWidth: 2
-                                },
-                                revealed && option.isHuman && {
-                                    backgroundColor: colors.feedback.success,
-                                    borderColor: colors.border.success
-                                },
-                                revealed && selectedIndex === index && !option.isHuman && {
-                                    backgroundColor: colors.feedback.error,
-                                    borderColor: colors.border.error
-                                }
-                            ]}
-                            onPress={() => handleGuess(index)}
-                            disabled={revealed}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Option ${index + 1}: ${option.text}`}
-                            accessibilityHint="Double tap to select this answer"
-                        >
-                            <Text style={[styles.text, { color: colors.text.primary }]}>{option.text}</Text>
-                        </TouchableOpacity>
-                    </Animated.View>
-                ))}
+                <Text style={styles.prompt}>Which one is {currentPair.aiModel}?</Text>
+
+                {options.map((option, index) => {
+                    const isAi = !option.isHuman;
+                    const isSelected = selectedIndex === index;
+
+                    let cardStyle: any = [styles.card, { backgroundColor: colors.background.card, borderColor: colors.border.default }];
+
+                    if (revealed) {
+                        if (isAi) {
+                            // IT WAS AI (Target) -> Always Green
+                            cardStyle.push({
+                                backgroundColor: colors.feedback.success,
+                                borderColor: colors.border.success
+                            });
+                        } else if (isSelected) {
+                            // IT WAS HUMAN (Wrong) -> Red if selected
+                            cardStyle.push({
+                                backgroundColor: colors.feedback.error,
+                                borderColor: colors.border.error
+                            });
+                        } else {
+                            // HUMAN (Unselected) -> Dim
+                            cardStyle.push({ opacity: 0.5 });
+                        }
+                    } else if (isSelected) {
+                        // Selected state before reveal (if any)
+                        cardStyle.push(styles.selectedCard);
+                    }
+
+                    return (
+                        <Animated.View key={index} style={animatedCardStyle}>
+                            <TouchableOpacity
+                                style={cardStyle}
+                                onPress={() => !revealed && handleGuess(index)}
+                                disabled={revealed}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.text}>{option.text}</Text>
+                                {revealed && (
+                                    <View style={styles.labelContainer}>
+                                        <Text style={[
+                                            styles.labelText,
+                                            { color: isAi ? colors.border.success : colors.border.error }
+                                        ]}>
+                                            {isAi ? `AI (${currentPair.aiModel}) 🤖` : "Human (Original) ✍️"}
+                                        </Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        </Animated.View>
+                    );
+                })}
             </ScrollView>
 
             {revealed && (
-                <Animated.View
-                    entering={FadeInDown.delay(200)}
-                    style={[
-                        styles.actions,
-                        {
-                            backgroundColor: colors.background.secondary,
-                            borderTopColor: colors.background.scanline
-                        }
-                    ]}
-                >
-                    <View style={styles.modelReveal}>
-                        <Text style={[styles.modelLabel, { color: colors.text.secondary }]}>AI Model:</Text>
-                        <View style={[
-                            styles.modelBadge,
-                            {
-                                borderColor: getModelColor(currentPair.aiModel, colors),
-                                backgroundColor: `${getModelColor(currentPair.aiModel, colors)}20` // 20% opacity
-                            }
+                <Animated.View entering={FadeIn.duration(300)} style={styles.actions}>
+                    <View style={styles.resultContainer}>
+                        <Text style={[
+                            styles.resultTitle,
+                            { color: !options[selectedIndex!].isHuman ? colors.text.accent : colors.text.highlight }
                         ]}>
-                            <Text style={[
-                                styles.modelName,
-                                { color: getModelColor(currentPair.aiModel, colors) }
-                            ]}>
-                                {currentPair.aiModel}
-                            </Text>
-                        </View>
+                            {!options[selectedIndex!].isHuman ? "Correct! You spotted the AI." : "Oops! That was written by a human."}
+                        </Text>
                     </View>
+                    <View style={styles.modelReveal}>
+                        <Text style={styles.modelLabel}>Model used:</Text>
+                        <Text style={[styles.modelName, { color: colors.text.primary }]}>{currentPair.aiModel}</Text>
+                    </View>
+
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
-                            style={[
-                                styles.shareButton,
-                                {
-                                    backgroundColor: colors.background.secondary,
-                                    borderColor: colors.border.error
-                                }
-                            ]}
+                            style={[styles.shareButton, { borderColor: colors.border.primary }]}
                             onPress={handleShare}
                             accessibilityRole="button"
-                            accessibilityLabel="Share your result"
-                            accessibilityHint="Share this challenge with friends"
+                            accessibilityLabel="Share Result"
                         >
-                            <Share2 color={colors.text.primary} size={20} />
+                            <Share2 size={24} color={colors.text.primary} />
                         </TouchableOpacity>
+
                         <TouchableOpacity
-                            style={[
-                                styles.nextButton,
-                                { backgroundColor: colors.border.default }
-                            ]}
+                            style={styles.nextButton}
                             onPress={nextQuestion}
                             accessibilityRole="button"
                             accessibilityLabel="Next Question"
@@ -236,14 +249,16 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
     },
     scrollContent: {
+        flexGrow: 1, // Allow centering
+        justifyContent: 'center', // Center vertically
         padding: 20,
-        paddingBottom: 40,
+        paddingBottom: 280, // Ensure space for bottom actions (sheet height)
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 20,
-        marginTop: 40,
+        marginBottom: 40, // Increased spacing from content
+        marginTop: 60, // Status bar clearance
     },
     category: {
         color: COLORS.cyan,
@@ -253,18 +268,27 @@ const styles = StyleSheet.create({
     streak: {
         color: COLORS.pink,
         fontSize: 16,
+        fontWeight: 'bold',
+    },
+    prompt: {
+        color: COLORS.white,
+        fontSize: 22,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 30,
     },
     content: {
-        gap: 20,
+        gap: 30, // Increased gap
     },
     card: {
         backgroundColor: 'rgba(110, 44, 243, 0.1)',
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: 24, // Smoother corners
+        padding: 24, // More breathing room
         borderWidth: 1,
         borderColor: COLORS.purple,
-        minHeight: 150,
+        minHeight: 160,
         justifyContent: 'center',
+        marginBottom: 30, // Spacing between cards
     },
     selectedCard: {
         borderColor: COLORS.white,
@@ -298,9 +322,23 @@ const styles = StyleSheet.create({
     },
     actions: {
         padding: 20,
-        backgroundColor: 'rgba(110, 44, 243, 0.05)',
+        paddingBottom: 110, // Added padding for TabBar clearance
+        backgroundColor: COLORS.navy, // Solid background
         borderTopWidth: 1,
         borderTopColor: 'rgba(110, 44, 243, 0.2)',
+        position: 'absolute', // Pin to bottom
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: -5,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 10,
     },
     modelReveal: {
         flexDirection: 'row',
@@ -314,14 +352,30 @@ const styles = StyleSheet.create({
         marginRight: 6,
     },
     modelName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    labelContainer: {
+        marginTop: 15,
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: 8,
+        alignSelf: 'center',
+    },
+    labelText: {
         fontSize: 14,
         fontWeight: 'bold',
     },
-    modelBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        borderWidth: 1,
+    resultContainer: {
+        marginBottom: 10,
+        alignItems: 'center',
+    },
+    resultTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
     actionButtons: {
         flexDirection: 'row',

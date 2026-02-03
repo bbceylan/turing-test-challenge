@@ -3,7 +3,7 @@ import { getRandomPair, TextPair } from '../utils/mockData';
 import { useStore } from '../store/useStore';
 import { showInterstitialIfReady } from '../utils/ads';
 
-export const useGameLogic = () => {
+export const useGameLogic = (category?: string) => {
     const [currentPair, setCurrentPair] = useState<TextPair | null>(null);
     const [revealed, setRevealed] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -12,7 +12,7 @@ export const useGameLogic = () => {
     const { addXp } = useStore();
 
     const nextQuestion = useCallback(() => {
-        const pair = getRandomPair();
+        const pair = getRandomPair(category);
         setCurrentPair(pair);
         const sortedOptions = [
             { text: pair.human, isHuman: true },
@@ -21,7 +21,7 @@ export const useGameLogic = () => {
         setOptions(sortedOptions);
         setRevealed(false);
         setSelectedIndex(null);
-    }, []);
+    }, [category]);
 
     useEffect(() => {
         nextQuestion();
@@ -32,7 +32,7 @@ export const useGameLogic = () => {
 
         setSelectedIndex(index);
         setRevealed(true);
-        const isCorrect = options[index].isHuman;
+        const isCorrect = !options[index].isHuman; // Win condition: Identify the AI
 
         addXp(10, isCorrect);
         showInterstitialIfReady();

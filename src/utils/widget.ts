@@ -1,4 +1,5 @@
-import * as FileSystem from 'expo-file-system';
+// @ts-ignore
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 
 const WIDGET_DATA_PATH = `${(FileSystem as any).documentDirectory}widget_data.json`;
