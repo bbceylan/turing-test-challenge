@@ -2,8 +2,13 @@ import * as SQLite from 'expo-sqlite';
 
 const dbName = 'turing_test.db';
 
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
 export const getDb = async () => {
-  return await SQLite.openDatabaseAsync(dbName);
+  if (!dbPromise) {
+    dbPromise = SQLite.openDatabaseAsync(dbName);
+  }
+  return await dbPromise;
 };
 
 export const initDb = async () => {

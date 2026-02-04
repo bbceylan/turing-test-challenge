@@ -17,13 +17,14 @@ jest.mock('../../utils/mockData', () => ({
 }));
 
 describe('useGameLogic', () => {
-    const mockAddXp = jest.fn();
+    const mockAddXpWithOptions = jest.fn();
     const mockStats = { totalXp: 100, currentStreak: 5, maxStreak: 10 };
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockAddXpWithOptions.mockResolvedValue(undefined);
         (useStore as unknown as jest.Mock).mockReturnValue({
-            addXp: mockAddXp,
+            addXpWithOptions: mockAddXpWithOptions,
             stats: mockStats
         });
     });
@@ -58,7 +59,7 @@ describe('useGameLogic', () => {
         expect(result.current.selectedIndex).toBe(aiIndex);
         expect(result.current.gameOver).toBe(false);
         expect(result.current.sessionStreak).toBe(1);
-        expect(mockAddXp).toHaveBeenCalledWith(10, true);
+        expect(mockAddXpWithOptions).toHaveBeenCalledWith(10, true);
     });
 
     it('handles incorrect guess and triggers game over', () => {
@@ -72,7 +73,7 @@ describe('useGameLogic', () => {
 
         expect(result.current.revealed).toBe(true);
         expect(result.current.gameOver).toBe(true);
-        expect(mockAddXp).toHaveBeenCalledWith(0, false);
+        expect(mockAddXpWithOptions).toHaveBeenCalledWith(0, false);
     });
 
     it('loads next question', () => {

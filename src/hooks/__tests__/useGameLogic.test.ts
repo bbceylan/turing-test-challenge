@@ -18,12 +18,13 @@ jest.mock('../../utils/mockData', () => ({
 }));
 
 describe('useGameLogic', () => {
-    const mockAddXp = jest.fn();
+    const mockAddXpWithOptions = jest.fn();
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockAddXpWithOptions.mockResolvedValue(undefined);
         (useStore as unknown as jest.Mock).mockReturnValue({
-            addXp: mockAddXp,
+            addXpWithOptions: mockAddXpWithOptions,
         });
     });
 
@@ -48,7 +49,7 @@ describe('useGameLogic', () => {
 
         expect(result.current.revealed).toBe(true);
         expect(result.current.selectedIndex).toBe(aiIndex);
-        expect(mockAddXp).toHaveBeenCalledWith(10, true);
+        expect(mockAddXpWithOptions).toHaveBeenCalledWith(10, true);
     });
 
     it('handles incorrect guess', () => {
@@ -64,7 +65,7 @@ describe('useGameLogic', () => {
 
         expect(result.current.revealed).toBe(true);
         expect(result.current.selectedIndex).toBe(humanIndex);
-        expect(mockAddXp).toHaveBeenCalledWith(0, false);
+        expect(mockAddXpWithOptions).toHaveBeenCalledWith(0, false);
     });
 
     it('loads next question', () => {
@@ -104,6 +105,29 @@ describe('useGameLogic', () => {
         });
 
         expect(secondResult).toBeNull();
-        expect(mockAddXp).toHaveBeenCalledTimes(1); // Should only count first guess
+        expect(mockAddXpWithOptions).toHaveBeenCalledTimes(1); // Should only count first guess
+    });
+
+    it('applies streak bonus on the 5th correct answer', () => {
+        const { result } = renderHook(() => useGameLogic());
+
+        for (let i = 0; i < 5; i++) {
+            const aiIndex = result.current.options.findIndex(opt => !opt.isHuman);
+            act(() => {
+                result.current.submitGuess(aiIndex);
+            });
+            if (i < 4) {
+                act(() => {
+                    result.current.nextQuestion();
+                });
+            }
+        }
+
+        expect(mockAddXpWithOptions).toHaveBeenCalledTimes(5);
+        expect(mockAddXpWithOptions).toHaveBeenNthCalledWith(1, 10, true);
+        expect(mockAddXpWithOptions).toHaveBeenNthCalledWith(2, 10, true);
+        expect(mockAddXpWithOptions).toHaveBeenNthCalledWith(3, 10, true);
+        expect(mockAddXpWithOptions).toHaveBeenNthCalledWith(4, 10, true);
+        expect(mockAddXpWithOptions).toHaveBeenNthCalledWith(5, 15, true);
     });
 });

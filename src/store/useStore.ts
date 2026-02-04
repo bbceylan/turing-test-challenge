@@ -134,15 +134,30 @@ export const useStore = create<AppState>((set, get) => ({
         const nextSeasonXp = (seasonReset ? 0 : (periodStats?.season_xp ?? stats.seasonXp)) + earned;
 
         // Milestone checks - comprehensive achievement system
-        const checkMilestones = async (xp: number, streak: number, maxStreak: number) => {
+        const checkMilestones = async (xp: number, streak: number, maxStreak: number, wasCorrect: boolean) => {
+            const updateMilestones = async (ids: string[]) => {
+                if (ids.length === 0) return;
+                const placeholders = ids.map(() => '?').join(', ');
+                await db.runAsync(
+                    `UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND completed_at IS NULL`,
+                    ids
+                );
+            };
+
             // First guess (always check)
-            await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "first_guess" AND completed_at IS NULL');
+            await updateMilestones(['first_guess']);
+
+            if (!wasCorrect) {
+                return;
+            }
+
+            const milestonesToUpdate: string[] = [];
 
             // Streak achievements
             const streakThresholds = [3, 5, 10, 25, 50, 100];
             for (const threshold of streakThresholds) {
                 if (maxStreak >= threshold) {
-                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "streak_${threshold}" AND completed_at IS NULL`);
+                    milestonesToUpdate.push(`streak_${threshold}`);
                 }
             }
 
@@ -150,17 +165,7 @@ export const useStore = create<AppState>((set, get) => ({
             const xpThresholds = [100, 500, 1000, 5000, 10000];
             for (const threshold of xpThresholds) {
                 if (xp >= threshold) {
-                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "total_${threshold}_xp" AND completed_at IS NULL`);
-                }
-            }
-
-            // Correct guesses achievements (query from DB)
-            const correctResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM quiz_results WHERE is_correct = 1');
-            const correctCount = correctResult?.count || 0;
-            const correctThresholds = [10, 50, 100, 500, 1000];
-            for (const threshold of correctThresholds) {
-                if (correctCount >= threshold) {
-                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "correct_${threshold}" AND completed_at IS NULL`);
+                    milestonesToUpdate.push(`total_${threshold}_xp`);
                 }
             }
 
@@ -168,51 +173,74 @@ export const useStore = create<AppState>((set, get) => ({
             const sessionThresholds = [5, 10, 20];
             for (const threshold of sessionThresholds) {
                 if (streak >= threshold) {
-                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "perfect_session_${threshold}" AND completed_at IS NULL`);
+                    milestonesToUpdate.push(`perfect_session_${threshold}`);
                 }
             }
 
             // Combo: streak + XP
             if (maxStreak >= 10 && xp >= 500) {
-                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "streak_and_xp" AND completed_at IS NULL');
+                milestonesToUpdate.push('streak_and_xp');
             }
 
             // Comeback kid: currently at 10+ streak
             if (streak >= 10) {
-                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "comeback_kid" AND completed_at IS NULL');
+                milestonesToUpdate.push('comeback_kid');
             }
 
-            // Check category-specific achievements
+            await updateMilestones(milestonesToUpdate);
+
+            // Correct guesses achievements (query from DB)
+            const correctResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM quiz_results WHERE is_correct = 1');
+            const correctCount = correctResult?.count || 0;
+            const correctThresholds = [10, 50, 100, 500, 1000];
+            const correctMilestones: string[] = [];
+            for (const threshold of correctThresholds) {
+                if (correctCount >= threshold) {
+                    correctMilestones.push(`correct_${threshold}`);
+                }
+            }
+            await updateMilestones(correctMilestones);
+
+            // Category-specific achievements (single grouped query)
             const categories = ['Literature', 'Science', 'Philosophy', 'History', 'Fantasy', 'Pop Culture'];
             const categoryIds = ['literature', 'science', 'philosophy', 'history', 'fantasy', 'popculture'];
+            const categoryRows = await db.getAllAsync<{ category: string; count: number }>(
+                'SELECT category, COUNT(*) as count FROM quiz_results WHERE is_correct = 1 GROUP BY category'
+            );
+            const categoryMap = new Map(categoryRows.map(row => [row.category, row.count]));
+            const categoryMilestones: string[] = [];
             for (let i = 0; i < categories.length; i++) {
                 const cat = categories[i];
                 const catId = categoryIds[i];
-                const catResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM quiz_results WHERE is_correct = 1 AND category = ?', [cat]);
-                const catCount = catResult?.count || 0;
+                const catCount = categoryMap.get(cat) || 0;
                 if (catCount >= 10) {
-                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "${catId}_10" AND completed_at IS NULL`);
+                    categoryMilestones.push(`${catId}_10`);
                 }
                 if (catCount >= 50) {
-                    await db.runAsync(`UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "${catId}_50" AND completed_at IS NULL`);
+                    categoryMilestones.push(`${catId}_50`);
                 }
             }
+            await updateMilestones(categoryMilestones);
 
             // Grandmaster: check if 20+ achievements unlocked
-            const unlockedResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM milestones WHERE completed_at IS NOT NULL AND id != "grandmaster"');
+            const unlockedResult = await db.getFirstAsync<{ count: number }>(
+                'SELECT COUNT(*) as count FROM milestones WHERE completed_at IS NOT NULL AND id != "grandmaster"'
+            );
             if ((unlockedResult?.count || 0) >= 20) {
-                await db.runAsync('UPDATE milestones SET completed_at = CURRENT_TIMESTAMP WHERE id = "grandmaster" AND completed_at IS NULL');
+                await updateMilestones(['grandmaster']);
             }
         };
 
-        await checkMilestones(newXp, newStreak, newMaxStreak);
+        await checkMilestones(newXp, newStreak, newMaxStreak, correct);
 
         await db.runAsync(
             'UPDATE user_stats SET total_xp = ?, current_streak = ?, max_streak = ?, weekly_xp = ?, season_xp = ?, week_key = ?, season_key = ?, streak_shields = ?, last_played_at = CURRENT_TIMESTAMP WHERE id = 1',
             [newXp, newStreak, newMaxStreak, nextWeeklyXp, nextSeasonXp, weekKey, seasonKey, nextShieldCount]
         );
 
-        updateWidgetData({ currentStreak: newStreak, totalXp: newXp });
+        if (newStreak !== stats.currentStreak || newXp !== stats.totalXp) {
+            updateWidgetData({ currentStreak: newStreak, totalXp: newXp });
+        }
 
         set({
             stats: {

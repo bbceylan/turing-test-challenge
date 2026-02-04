@@ -18,13 +18,16 @@ jest.mock('expo-constants', () => ({
 describe('useStore Logic', () => {
     const mockRunAsync = jest.fn();
     const mockGetFirstAsync = jest.fn();
+    const mockGetAllAsync = jest.fn();
 
     beforeEach(() => {
         jest.clearAllMocks();
         (getDb as jest.Mock).mockResolvedValue({
             runAsync: mockRunAsync,
             getFirstAsync: mockGetFirstAsync,
+            getAllAsync: mockGetAllAsync,
         });
+        mockGetAllAsync.mockResolvedValue([]);
 
         // Reset store state
         useStore.setState({

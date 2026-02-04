@@ -87,9 +87,10 @@ export const useGameLogic = (category?: string, mode: GameMode = 'STANDARD', cat
         const shouldPromptShield = !isCorrect && mode !== 'DAILY' && stats.streakShields > 0;
 
         if (isCorrect) {
-            // Calculate XP earned for this answer
+            // Calculate XP earned for this answer (apply streak bonus on 5th, 10th, etc.)
             const baseXp = XP_VALUES.CORRECT_GUESS;
-            const streakBonus = Math.floor(sessionStreak / 5) * XP_VALUES.STREAK_BONUS_BASE;
+            const nextStreak = sessionStreak + 1;
+            const streakBonus = Math.floor(nextStreak / 5) * XP_VALUES.STREAK_BONUS_BASE;
             const dailyBonus = mode === 'DAILY' ? XP_VALUES.DAILY_BONUS : 0;
             const earnedXp = baseXp + streakBonus + dailyBonus;
 
@@ -106,19 +107,36 @@ export const useGameLogic = (category?: string, mode: GameMode = 'STANDARD', cat
         }
 
         const baseXp = XP_VALUES.CORRECT_GUESS;
-        const streakBonus = Math.floor(sessionStreak / 5) * XP_VALUES.STREAK_BONUS_BASE;
+        const effectiveStreak = isCorrect ? sessionStreak + 1 : sessionStreak;
+        const streakBonus = Math.floor(effectiveStreak / 5) * XP_VALUES.STREAK_BONUS_BASE;
         const dailyBonus = mode === 'DAILY' ? XP_VALUES.DAILY_BONUS : 0;
         const earnedXp = baseXp + streakBonus + dailyBonus;
         if (isCorrect) {
-            addXpWithOptions(earnedXp, true);
+            void Promise.resolve(addXpWithOptions(earnedXp, true)).catch((error: unknown) => {
+                if (__DEV__) {
+                    console.warn('Failed to add XP:', error);
+                }
+            });
         } else if (!shouldPromptShield) {
-            addXpWithOptions(0, false);
+            void Promise.resolve(addXpWithOptions(0, false)).catch((error: unknown) => {
+                if (__DEV__) {
+                    console.warn('Failed to add XP:', error);
+                }
+            });
         }
 
         if (mode === 'DAILY') {
             const dateKey = getLocalDateKey();
-            completeDailyChallenge(dateKey, isCorrect, isCorrect ? earnedXp : 0);
-            addDailyResult(dateKey, isCorrect, isCorrect ? earnedXp : 0);
+            void completeDailyChallenge(dateKey, isCorrect, isCorrect ? earnedXp : 0).catch((error: unknown) => {
+                if (__DEV__) {
+                    console.warn('Failed to complete daily challenge:', error);
+                }
+            });
+            void addDailyResult(dateKey, isCorrect, isCorrect ? earnedXp : 0).catch((error: unknown) => {
+                if (__DEV__) {
+                    console.warn('Failed to add daily result:', error);
+                }
+            });
             setDailyStatus({
                 dateKey,
                 completed: true,
@@ -154,7 +172,11 @@ export const useGameLogic = (category?: string, mode: GameMode = 'STANDARD', cat
                 ]
             );
         };
-        dbWrite();
+        void dbWrite().catch((error: unknown) => {
+            if (__DEV__) {
+                console.warn('Failed to record quiz result:', error);
+            }
+        });
 
         return { isCorrect };
     };

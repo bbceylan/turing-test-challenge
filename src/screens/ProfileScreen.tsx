@@ -120,6 +120,18 @@ export const ProfileScreen = () => {
         transform: [{ scale: proPulse.value }],
     }));
 
+    const handleUpdateUsername = async () => {
+        const next = draftName.trim();
+        if (!next) return;
+        setSavingName(true);
+        try {
+            setUsername(next);
+            setIsEditing(false);
+        } finally {
+            setSavingName(false);
+        }
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
             <Text style={[styles.title, { color: colors.text.accent }]}>Agent Profile</Text>
@@ -408,14 +420,3 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
 });
-    const handleUpdateUsername = async () => {
-        const next = draftName.trim();
-        if (!next) return;
-        setSavingName(true);
-        try {
-            setUsername(next);
-            setIsEditing(false);
-        } finally {
-            setSavingName(false);
-        }
-    };
