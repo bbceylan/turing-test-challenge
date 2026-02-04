@@ -26,19 +26,9 @@ jest.mock('../src/screens/PlayScreen', () => ({ PlayScreen: () => 'PlayScreen' }
 jest.mock('../src/screens/LeaderboardScreen', () => ({ LeaderboardScreen: () => 'LeaderboardScreen' }));
 jest.mock('../src/screens/MilestoneScreen', () => ({ MilestoneScreen: () => 'MilestoneScreen' }));
 jest.mock('../src/screens/ProfileScreen', () => ({ ProfileScreen: () => 'ProfileScreen' }));
-jest.mock('../src/screens/AuthScreen', () => ({ AuthScreen: () => 'AuthScreen' }));
 
 jest.mock('../src/db/client', () => ({
     initDb: jest.fn(),
-}));
-
-jest.mock('../src/utils/supabase', () => ({
-    supabase: {
-        auth: {
-            getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
-            onAuthStateChange: jest.fn().mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } }),
-        }
-    }
 }));
 
 jest.mock('../src/store/useStore');
@@ -48,9 +38,9 @@ jest.mock('../src/utils/notifications', () => ({
     registerForPushNotificationsAsync: jest.fn(),
     scheduleDailyReminder: jest.fn(),
 }));
-jest.mock('../src/utils/ads', () => ({
-    loadInterstitial: jest.fn(),
-    loadRewarded: jest.fn(),
+jest.mock('../src/utils/iap', () => ({
+    initIap: jest.fn(),
+    restoreProPurchases: jest.fn(),
 }));
 
 describe('App Smoke Test', () => {
@@ -59,12 +49,9 @@ describe('App Smoke Test', () => {
         (useStore as unknown as jest.Mock).mockReturnValue({
             loadStats: jest.fn(),
             isLoading: false,
-            session: { user: { id: '123' } },
-            setSession: jest.fn(), // Ensure this is defined
-            isGuest: false,
+            setIsPro: jest.fn(),
             // Add any other methods called in App.tsx setup if needed, but setSession was the one failing
         });
-        (useStore as any).getState = jest.fn().mockReturnValue({ isGuest: false });
         (useStore as any).setState = jest.fn();
     });
 
@@ -82,7 +69,7 @@ describe('App Smoke Test', () => {
         (useStore as unknown as jest.Mock).mockReturnValue({
             loadStats: jest.fn(),
             isLoading: true, // Force loading
-            setSession: jest.fn(),
+            setIsPro: jest.fn(),
         });
 
         const { getByText } = render(<App />);

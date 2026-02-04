@@ -15,9 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bbceylan.turingtest",
-      "usesAppleSignIn": true,
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
@@ -35,36 +33,14 @@
       }
     },
     "scheme": "turingtest",
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.bbceylan.turingtest",
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "ca-app-pub-xxxxxxxxxxxxxxxx~android",
-          "iosAppId": "ca-app-pub-xxxxxxxxxxxxxxxx~ios"
-        }
-      ]
-    ],
     "extra": {
-      "admob": {
-        "banner": "ca-app-pub-xxxxxxxxxxxxxxxx/banner",
-        "interstitial": "ca-app-pub-xxxxxxxxxxxxxxxx/interstitial",
-        "rewarded": "ca-app-pub-xxxxxxxxxxxxxxxx/rewarded"
-      },
-      "revenuecat": {
-        "ios": "appl_xxxxxxxxxxxxx",
-        "android": "goog_xxxxxxxxxxxxx"
+      "iap": {
+        "ios": [
+          "com.bbceylan.turingtest.pro"
+        ]
       }
     }
   }

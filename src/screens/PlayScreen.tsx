@@ -2,10 +2,10 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { QuizView } from '../components/QuizView';
 import { CategorySelector } from '../components/CategorySelector';
-import { SmartBannerAd } from '../components/SmartBannerAd';
 import { useTheme } from '../hooks/useTheme';
 import { THEME_PACKS } from '../utils/themePacks';
 import { useStore } from '../store/useStore';
+import { useNavigation } from '@react-navigation/native';
 
 interface PlayScreenProps {
     onNavigateToLeaderboard?: () => void;
@@ -14,14 +14,10 @@ interface PlayScreenProps {
 export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard }) => {
     const { colors } = useTheme();
     const { stats } = useStore();
+    const navigation = useNavigation();
     const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
     const [selectedPack, setSelectedPack] = React.useState<string | null>(null);
     const [mode, setMode] = React.useState<'SELECT' | 'CATEGORY' | 'DAILY' | 'PACK' | 'GHOST'>('SELECT');
-
-    React.useEffect(() => {
-        // Load the first interstitial when the screen mounts
-        import('../utils/ads').then(mod => mod.loadInterstitial());
-    }, []);
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
@@ -54,7 +50,7 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard 
                         setSelectedCategory(null);
                         setMode('SELECT');
                     }}
-                    onNavigateToLeaderboard={onNavigateToLeaderboard}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard ?? (() => navigation.navigate('Local' as never))}
                 />
             )}
             {mode === 'DAILY' && (
@@ -64,7 +60,7 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard 
                         setSelectedCategory(null);
                         setMode('SELECT');
                     }}
-                    onNavigateToLeaderboard={onNavigateToLeaderboard}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard ?? (() => navigation.navigate('Local' as never))}
                 />
             )}
             {mode === 'PACK' && selectedPack && (
@@ -75,7 +71,7 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard 
                         setSelectedPack(null);
                         setMode('SELECT');
                     }}
-                    onNavigateToLeaderboard={onNavigateToLeaderboard}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard ?? (() => navigation.navigate('Local' as never))}
                 />
             )}
             {mode === 'GHOST' && (
@@ -87,10 +83,9 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({ onNavigateToLeaderboard 
                         setSelectedPack(null);
                         setMode('SELECT');
                     }}
-                    onNavigateToLeaderboard={onNavigateToLeaderboard}
+                    onNavigateToLeaderboard={onNavigateToLeaderboard ?? (() => navigation.navigate('Local' as never))}
                 />
             )}
-            <SmartBannerAd />
         </View>
     );
 };

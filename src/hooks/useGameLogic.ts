@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getRandomPair, TextPair } from '../utils/mockData';
 import { useStore } from '../store/useStore';
-import { showInterstitialIfReady } from '../utils/ads';
 import { XP_VALUES } from '../constants/theme';
 import { completeDailyChallenge, getDailyChallenge, getLocalDateKey, DailyStatus } from '../utils/daily';
 import { getDb } from '../db/client';
@@ -156,8 +155,6 @@ export const useGameLogic = (category?: string, mode: GameMode = 'STANDARD', cat
             );
         };
         dbWrite();
-
-        showInterstitialIfReady();
 
         return { isCorrect };
     };

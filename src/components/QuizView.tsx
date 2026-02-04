@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Modal, Alert } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Modal } from 'react-native';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
 import { useStore } from '../store/useStore';
 import { useGameLogic } from '../hooks/useGameLogic';
 import * as Haptics from 'expo-haptics';
-import { showInterstitialIfReady } from '../utils/ads';
-import { loadRewarded, showRewardedIfReady } from '../utils/ads';
 import { Share } from 'react-native';
 import { Share2, ArrowLeft } from 'lucide-react-native';
 import Animated, {
@@ -88,7 +86,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
         roundsPlayed,
         ghostCorrect,
     } = useGameLogic(category, mode, categories, roundLimit);
-    const { stats, isGuest, setGuest, isPro, adFreeUntil, rewardedReady } = useStore();
+    const { stats, isPro } = useStore();
     const { colors } = useTheme();
     const navigation = useNavigation();
     const [hint, setHint] = useState<string>('');
@@ -155,14 +153,6 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
         navigation.navigate('Profile');
     };
 
-    const handleWatchAd = () => {
-        const shown = showRewardedIfReady();
-        if (!shown) {
-            loadRewarded();
-            Alert.alert('Loading Ad', 'Ad is loading. Please try again in a moment.');
-        }
-    };
-
     if (!currentPair) return null;
 
     return (
@@ -175,9 +165,8 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
                 isNewRecord={mode === 'GHOST' ? ghostCorrect >= stats.ghostBestScore : (isNewRecord || streakBeforeGameOver === maxStreak)}
                 onTryAgain={handleTryAgain}
                 onViewLeaderboard={handleViewLeaderboard}
-                showUpsell={!isPro && (!adFreeUntil || adFreeUntil <= Date.now()) && (mode === 'GHOST' ? ghostCorrect >= (stats.ghostBestScore || 0) : (isNewRecord || streakBeforeGameOver >= 7 || sessionXp >= 50))}
+                showUpsell={!isPro && (mode === 'GHOST' ? ghostCorrect >= (stats.ghostBestScore || 0) : (isNewRecord || streakBeforeGameOver >= 7 || sessionXp >= 50))}
                 onGoPro={handleGoPro}
-                onWatchAd={handleWatchAd}
             />
             <AnimatedScanline />
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
@@ -214,22 +203,6 @@ export const QuizView: React.FC<QuizViewProps> = ({ category, categories, onBack
                         <Text style={[styles.dailyBannerText, { color: colors.text.primary }]}>
                             {dailyStatus?.completed ? 'Daily ritual complete. Come back tomorrow.' : 'One shot. Bonus XP on a correct guess.'}
                         </Text>
-                    </View>
-                )}
-
-                {isGuest && (stats.currentStreak >= 3 || stats.totalXp >= 50) && (
-                    <View style={[styles.authBanner, { borderColor: colors.border.default, backgroundColor: colors.background.secondary }]}>
-                        <Text style={[styles.authBannerText, { color: colors.text.primary }]}>
-                            Save your streak and sync across devices.
-                        </Text>
-                        <TouchableOpacity
-                            style={[styles.authBannerButton, { borderColor: colors.text.highlight }]}
-                            onPress={() => setGuest(false)}
-                            accessibilityRole="button"
-                            accessibilityLabel="Sign in to sync"
-                        >
-                            <Text style={[styles.authBannerButtonText, { color: colors.text.primary }]}>Sign In</Text>
-                        </TouchableOpacity>
                     </View>
                 )}
 
@@ -442,36 +415,6 @@ const styles = StyleSheet.create({
     dailyBannerText: {
         fontSize: 12,
         textAlign: 'center',
-        letterSpacing: 0.3,
-    },
-    authBanner: {
-        borderWidth: 1,
-        borderRadius: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 12,
-        marginBottom: 18,
-        alignSelf: 'center',
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 10,
-    },
-    authBannerText: {
-        fontSize: 12,
-        flex: 1,
-        letterSpacing: 0.2,
-    },
-    authBannerButton: {
-        borderWidth: 1,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 10,
-        backgroundColor: 'rgba(255, 45, 171, 0.15)',
-    },
-    authBannerButtonText: {
-        fontSize: 12,
-        fontWeight: '700',
         letterSpacing: 0.3,
     },
     content: {

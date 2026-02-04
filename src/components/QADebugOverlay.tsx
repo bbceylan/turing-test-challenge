@@ -8,18 +8,11 @@ export const QADebugOverlay = () => {
         qaOverlay,
         setQaOverlay,
         stats,
-        isGuest,
         isPro,
-        adFreeUntil,
         friendCode,
-        rewardedReady,
     } = useStore();
 
     if (!qaOverlay) return null;
-
-    const adFreeLabel = adFreeUntil && adFreeUntil > Date.now()
-        ? new Date(adFreeUntil).toLocaleTimeString()
-        : 'inactive';
 
     return (
         <View style={styles.container} pointerEvents="box-none">
@@ -35,10 +28,8 @@ export const QADebugOverlay = () => {
                         <Text style={styles.closeText}>X</Text>
                     </TouchableOpacity>
                 </View>
-                <Text style={styles.line}>Mode: {isGuest ? 'GUEST' : 'AUTH'}</Text>
+                <Text style={styles.line}>Mode: OFFLINE</Text>
                 <Text style={styles.line}>Pro: {isPro ? 'YES' : 'NO'}</Text>
-                <Text style={styles.line}>Ad-Free Until: {adFreeLabel}</Text>
-                <Text style={styles.line}>Rewarded Ready: {rewardedReady ? 'YES' : 'NO'}</Text>
                 <Text style={styles.line}>Friend Code: {friendCode || 'NONE'}</Text>
                 <Text style={styles.line}>XP: {stats.totalXp}</Text>
                 <Text style={styles.line}>Streak: {stats.currentStreak} (Max {stats.maxStreak})</Text>

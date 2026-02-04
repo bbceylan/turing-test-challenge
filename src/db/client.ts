@@ -35,12 +35,11 @@ export const initDb = async () => {
       season_xp INTEGER DEFAULT 0,
       week_key TEXT,
       season_key TEXT,
-      last_sync_xp INTEGER,
-      last_sync_at INTEGER,
       friend_code TEXT,
       streak_shields INTEGER DEFAULT 0,
       ghost_best_score INTEGER DEFAULT 0,
-      ad_free_until INTEGER,
+      is_pro INTEGER DEFAULT 0,
+      username TEXT,
       last_played_at TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -57,9 +56,6 @@ export const initDb = async () => {
   if (!userStatsCols.has('last_daily_date')) {
     await db.execAsync('ALTER TABLE user_stats ADD COLUMN last_daily_date TEXT');
   }
-  if (!userStatsCols.has('ad_free_until')) {
-    await db.execAsync('ALTER TABLE user_stats ADD COLUMN ad_free_until INTEGER');
-  }
   if (!userStatsCols.has('weekly_xp')) {
     await db.execAsync('ALTER TABLE user_stats ADD COLUMN weekly_xp INTEGER DEFAULT 0');
   }
@@ -72,12 +68,6 @@ export const initDb = async () => {
   if (!userStatsCols.has('season_key')) {
     await db.execAsync('ALTER TABLE user_stats ADD COLUMN season_key TEXT');
   }
-  if (!userStatsCols.has('last_sync_xp')) {
-    await db.execAsync('ALTER TABLE user_stats ADD COLUMN last_sync_xp INTEGER');
-  }
-  if (!userStatsCols.has('last_sync_at')) {
-    await db.execAsync('ALTER TABLE user_stats ADD COLUMN last_sync_at INTEGER');
-  }
   if (!userStatsCols.has('friend_code')) {
     await db.execAsync('ALTER TABLE user_stats ADD COLUMN friend_code TEXT');
   }
@@ -86,6 +76,12 @@ export const initDb = async () => {
   }
   if (!userStatsCols.has('ghost_best_score')) {
     await db.execAsync('ALTER TABLE user_stats ADD COLUMN ghost_best_score INTEGER DEFAULT 0');
+  }
+  if (!userStatsCols.has('is_pro')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN is_pro INTEGER DEFAULT 0');
+  }
+  if (!userStatsCols.has('username')) {
+    await db.execAsync('ALTER TABLE user_stats ADD COLUMN username TEXT');
   }
 
   await db.execAsync(`
@@ -102,9 +98,16 @@ export const initDb = async () => {
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS friends (
       friend_code TEXT PRIMARY KEY,
+      alias TEXT,
       added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  const friendsInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(friends)');
+  const friendsCols = new Set(friendsInfo.map(col => col.name));
+  if (!friendsCols.has('alias')) {
+    await db.execAsync('ALTER TABLE friends ADD COLUMN alias TEXT');
+  }
 
   // Check if milestones table needs migration (add category column)
   const tableInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(milestones)');
@@ -129,34 +132,6 @@ export const initDb = async () => {
       completed_at TIMESTAMP
     );
   `);
-
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS sync_queue (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      total_xp INTEGER NOT NULL,
-      max_streak INTEGER NOT NULL,
-      weekly_xp INTEGER,
-      season_xp INTEGER,
-      week_key TEXT,
-      season_key TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  const syncInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(sync_queue)');
-  const syncCols = new Set(syncInfo.map(col => col.name));
-  if (!syncCols.has('weekly_xp')) {
-    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN weekly_xp INTEGER');
-  }
-  if (!syncCols.has('season_xp')) {
-    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN season_xp INTEGER');
-  }
-  if (!syncCols.has('week_key')) {
-    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN week_key TEXT');
-  }
-  if (!syncCols.has('season_key')) {
-    await db.execAsync('ALTER TABLE sync_queue ADD COLUMN season_key TEXT');
-  }
 
   // Insert milestone definitions (preserves completed_at if already exists)
   await db.execAsync(`

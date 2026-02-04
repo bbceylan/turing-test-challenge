@@ -1,28 +1,12 @@
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, act } from '@testing-library/react-native';
 import { ProfileScreen } from '../ProfileScreen';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../hooks/useTheme';
-import { supabase } from '../../utils/supabase';
 
 // Mock dependencies
 jest.mock('../../store/useStore');
 jest.mock('../../hooks/useTheme');
-jest.mock('../../utils/supabase', () => ({
-    supabase: {
-        from: jest.fn(() => ({
-            select: jest.fn(() => ({
-                eq: jest.fn(() => ({
-                    single: jest.fn(() => Promise.resolve({ data: { username: 'Test User' }, error: null }))
-                }))
-            })),
-            upsert: jest.fn(() => Promise.resolve({ error: null })),
-        })),
-        auth: {
-            signOut: jest.fn(),
-        }
-    }
-}));
 
 // Mock Lucide Icons to avoid SVG issues
 jest.mock('lucide-react-native', () => ({
@@ -30,7 +14,6 @@ jest.mock('lucide-react-native', () => ({
     Edit3: 'EditIcon',
     Check: 'CheckIcon',
     X: 'XIcon',
-    Share2: 'ShareIcon',
 }));
 
 describe('ProfileScreen', () => {
@@ -51,18 +34,16 @@ describe('ProfileScreen', () => {
         });
     });
 
-    it('renders correctly in Guest Mode', async () => {
+    it('renders offline profile info', async () => {
         mockUseStore.mockReturnValue({
-            isGuest: true,
             stats: mockStats,
-            session: null,
-            user: null,
-            setGuest: jest.fn(),
-            setSession: jest.fn(),
             isPro: false,
-            rewardedReady: true,
-            forceMockAds: false,
-            setForceMockAds: jest.fn(),
+            setIsPro: jest.fn(),
+            friendCode: 'GUEST-ABC123',
+            username: null,
+            setUsername: jest.fn(),
+            qaOverlay: false,
+            setQaOverlay: jest.fn(),
         });
 
         const { getByText } = render(<ProfileScreen />);
@@ -71,77 +52,46 @@ describe('ProfileScreen', () => {
         });
 
         expect(getByText('Agent Profile')).toBeTruthy();
-        expect(getByText('Guest Agent')).toBeTruthy();
+        expect(getByText('Offline Agent')).toBeTruthy();
         expect(getByText('Offline Mode')).toBeTruthy();
-        expect(getByText('Sign Up / Sign In')).toBeTruthy();
     });
 
-    it('renders correctly in User Mode and fetches profile', async () => {
+    it('hides "Unlock Pro" button if user is Pro', async () => {
         mockUseStore.mockReturnValue({
-            isGuest: false,
             stats: mockStats,
-            session: { user: { email: 'test@example.com' } },
-            user: { id: 'user-123' },
             isPro: true,
-            setGuest: jest.fn(),
-            setSession: jest.fn(),
-            rewardedReady: true,
-            forceMockAds: false,
-            setForceMockAds: jest.fn(),
-        });
-
-        const { getByText } = render(<ProfileScreen />);
-        await act(async () => {
-            await flushPromises();
-        });
-
-        expect(getByText('Agent Profile')).toBeTruthy();
-        expect(getByText('test@example.com')).toBeTruthy();
-
-        await waitFor(() => {
-            expect(getByText('Test User')).toBeTruthy();
-        });
-    });
-
-    it('hides "Go Ad-Free" button if user is Pro', async () => {
-        mockUseStore.mockReturnValue({
-            isGuest: false,
-            stats: mockStats,
-            session: { user: { email: 'test@example.com' } },
-            user: { id: 'user-123' },
-            isPro: true, // Pro user
-            setGuest: jest.fn(),
-            setSession: jest.fn(),
-            rewardedReady: true,
-            forceMockAds: false,
-            setForceMockAds: jest.fn(),
+            setIsPro: jest.fn(),
+            friendCode: 'GUEST-ABC123',
+            username: 'Neo',
+            setUsername: jest.fn(),
+            qaOverlay: false,
+            setQaOverlay: jest.fn(),
         });
 
         const { queryByText } = render(<ProfileScreen />);
         await act(async () => {
             await flushPromises();
         });
-        expect(queryByText('Go Ad-Free')).toBeNull();
+
+        expect(queryByText('Unlock Pro')).toBeNull();
     });
 
-    it('shows "Go Ad-Free" button if user is NOT Pro', async () => {
+    it('shows "Unlock Pro" button if user is NOT Pro', async () => {
         mockUseStore.mockReturnValue({
-            isGuest: false,
             stats: mockStats,
-            session: { user: { email: 'test@example.com' } },
-            user: { id: 'user-123' },
-            isPro: false, // Free user
-            setGuest: jest.fn(),
-            setSession: jest.fn(),
-            rewardedReady: true,
-            forceMockAds: false,
-            setForceMockAds: jest.fn(),
+            isPro: false,
+            setIsPro: jest.fn(),
+            friendCode: 'GUEST-ABC123',
+            username: 'Neo',
+            setUsername: jest.fn(),
+            qaOverlay: false,
+            setQaOverlay: jest.fn(),
         });
 
         const { getByText } = render(<ProfileScreen />);
         await act(async () => {
             await flushPromises();
         });
-        expect(getByText('Go Ad-Free')).toBeTruthy();
+        expect(getByText('Unlock Pro')).toBeTruthy();
     });
 });

@@ -11,9 +11,6 @@ jest.mock('../../hooks/useGameLogic');
 jest.mock('../../store/useStore');
 jest.mock('../../hooks/useTheme');
 jest.mock('expo-haptics');
-jest.mock('../../utils/ads', () => ({
-    showInterstitialIfReady: jest.fn(),
-}));
 
 // Mock Reanimated
 jest.mock('react-native-reanimated', () => {

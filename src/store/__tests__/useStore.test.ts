@@ -7,13 +7,6 @@ jest.mock('../../db/client', () => ({
     getDb: jest.fn(),
 }));
 
-jest.mock('../../utils/supabase', () => ({
-    supabase: {
-        auth: { getSession: jest.fn() },
-        from: jest.fn(() => ({ upsert: jest.fn() }))
-    }
-}));
-
 jest.mock('../../utils/widget', () => ({
     updateWidgetData: jest.fn()
 }));
@@ -35,9 +28,16 @@ describe('useStore Logic', () => {
 
         // Reset store state
         useStore.setState({
-            stats: { totalXp: 0, currentStreak: 0, maxStreak: 0 },
-            session: null,
-            isGuest: true
+            stats: {
+                totalXp: 0,
+                currentStreak: 0,
+                maxStreak: 0,
+                dailyStreak: 0,
+                weeklyXp: 0,
+                seasonXp: 0,
+                streakShields: 0,
+                ghostBestScore: 0,
+            },
         });
     });
 
@@ -63,7 +63,16 @@ describe('useStore Logic', () => {
         // First get some streak
         act(() => {
             useStore.setState({
-                stats: { totalXp: 50, currentStreak: 5, maxStreak: 5 }
+                stats: {
+                    totalXp: 50,
+                    currentStreak: 5,
+                    maxStreak: 5,
+                    dailyStreak: 0,
+                    weeklyXp: 0,
+                    seasonXp: 0,
+                    streakShields: 0,
+                    ghostBestScore: 0,
+                }
             });
         });
 
@@ -81,7 +90,16 @@ describe('useStore Logic', () => {
 
         act(() => {
             useStore.setState({
-                stats: { totalXp: 100, currentStreak: 9, maxStreak: 10 }
+                stats: {
+                    totalXp: 100,
+                    currentStreak: 9,
+                    maxStreak: 10,
+                    dailyStreak: 0,
+                    weeklyXp: 0,
+                    seasonXp: 0,
+                    streakShields: 0,
+                    ghostBestScore: 0,
+                }
             });
         });
 

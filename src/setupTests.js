@@ -27,28 +27,7 @@ jest.mock('lucide-react-native', () => ({
     Monitor: 'Monitor',
     Scroll: 'Scroll',
     Sparkles: 'Sparkles',
-}));
-
-// Mock Supabase
-jest.mock('./utils/supabase', () => ({
-    supabase: {
-        auth: {
-            getSession: jest.fn(() => Promise.resolve({ data: { session: null }, error: null })),
-            signInWithPassword: jest.fn(),
-            signUp: jest.fn(),
-            signOut: jest.fn(),
-        },
-        from: jest.fn(() => ({
-            select: jest.fn().mockReturnThis(),
-            insert: jest.fn().mockReturnThis(),
-            update: jest.fn().mockReturnThis(),
-            upsert: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-        })),
-    },
+    BarChart3: 'BarChart3',
 }));
 
 // Mock Expo SQLite
@@ -63,28 +42,16 @@ jest.mock('expo-sqlite', () => ({
 }));
 
 // Mock Ads
-jest.mock('react-native-google-mobile-ads', () => ({
-    BannerAd: 'BannerAd',
-    BannerAdSize: {},
-    TestIds: { BANNER: 'test-banner', INTERSTITIAL: 'test-interstitial' },
-    InterstitialAd: {
-        createForAdRequest: jest.fn(() => ({
-            addAdEventListener: jest.fn(),
-            load: jest.fn(),
-            show: jest.fn(),
-        })),
-    },
+// Mock IAP
+jest.mock('react-native-iap', () => ({
+    initConnection: jest.fn(() => Promise.resolve(true)),
+    endConnection: jest.fn(() => Promise.resolve(true)),
+    getProducts: jest.fn(() => Promise.resolve([])),
+    requestPurchase: jest.fn(() => Promise.resolve(null)),
+    finishTransaction: jest.fn(() => Promise.resolve(true)),
+    getAvailablePurchases: jest.fn(() => Promise.resolve([])),
 }));
 
-// Mock RevenueCat
-jest.mock('react-native-purchases', () => ({
-    default: {
-        configure: jest.fn(),
-        getOfferings: jest.fn(),
-        purchasePackage: jest.fn(),
-        restorePurchases: jest.fn(),
-    },
-}));
 
 // Mock Expo Constants
 jest.mock('expo-constants', () => ({
@@ -109,14 +76,6 @@ jest.mock('expo-file-system/legacy', () => ({
     getInfoAsync: jest.fn(),
 }));
 
-jest.mock('expo-web-browser', () => ({
-    maybeCompleteAuthSession: jest.fn(),
-    openAuthSessionAsync: jest.fn(() => Promise.resolve({ type: 'dismiss' })),
-}));
-
-jest.mock('expo-auth-session', () => ({
-    makeRedirectUri: jest.fn(() => 'app://redirect'),
-}));
 
 // Mock Navigation
 jest.mock('@react-navigation/native', () => {

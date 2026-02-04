@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { initDb } from './src/db/client';
 import { useStore } from './src/store/useStore';
@@ -14,22 +14,26 @@ import { PlayScreen } from './src/screens/PlayScreen';
 import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { MilestoneScreen } from './src/screens/MilestoneScreen';
-import { Gamepad2, Trophy, User, Target } from 'lucide-react-native';
+import { Gamepad2, User, Target, BarChart3 } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 
-import { supabase } from './src/utils/supabase';
-import { AuthScreen } from './src/screens/AuthScreen';
-
 import { registerForPushNotificationsAsync, scheduleDailyReminder } from './src/utils/notifications';
-import { loadInterstitial, loadRewarded } from './src/utils/ads';
+import { initIap, restoreProPurchases } from './src/utils/iap';
 
 export default function App() {
-  const { loadStats, isLoading, session, setSession } = useStore();
+  const { loadStats, isLoading, setIsPro } = useStore();
   const [setupError, setSetupError] = useState<Error | null>(null);
 
   useEffect(() => {
-    let authSubscription: { unsubscribe: () => void } | null = null;
+    let appStateSubscription: { remove: () => void } | null = null;
+
+    const refreshPro = async () => {
+      const hasPro = await restoreProPurchases();
+      if (hasPro) {
+        setIsPro(true);
+      }
+    };
 
     const setup = async () => {
       try {
@@ -37,27 +41,19 @@ export default function App() {
         await initDb();
         await loadStats();
 
+        // IAP init + restore (silent)
+        await initIap();
+        await refreshPro();
+
         // Non-critical: These can fail silently
         try {
           registerForPushNotificationsAsync();
           scheduleDailyReminder();
-          loadInterstitial();
-          loadRewarded();
         } catch (nonCriticalError) {
           if (__DEV__) {
             console.warn('Non-critical setup failed:', nonCriticalError);
           }
         }
-
-        // Auth setup
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-
-        // Store subscription for cleanup
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-          setSession(session);
-        });
-        authSubscription = subscription;
 
       } catch (error) {
         if (__DEV__) {
@@ -68,13 +64,17 @@ export default function App() {
       }
     };
 
+    appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshPro();
+      }
+    });
+
     setup();
 
     // Cleanup function
     return () => {
-      if (authSubscription) {
-        authSubscription.unsubscribe();
-      }
+      appStateSubscription?.remove();
     };
   }, []);
 
@@ -107,14 +107,6 @@ export default function App() {
     );
   }
 
-  if (!session && !useStore.getState().isGuest) {
-    return (
-      <ErrorBoundary>
-        <AuthScreen />
-      </ErrorBoundary>
-    );
-  }
-
   return (
     <ErrorBoundary>
       {__DEV__ && <QADebugOverlay />}
@@ -123,20 +115,18 @@ export default function App() {
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              backgroundColor: Platform.OS === 'ios' ? 'transparent' : COLORS.navy,
+              backgroundColor: 'transparent',
               borderTopColor: 'rgba(110, 44, 243, 0.3)',
-              position: Platform.OS === 'ios' ? 'absolute' : 'relative',
+              position: 'absolute',
               height: 85,
               paddingBottom: 25,
             },
             tabBarBackground: () => (
-              Platform.OS === 'ios' ? (
-                <BlurView
-                  tint="dark"
-                  intensity={30}
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : undefined
+              <BlurView
+                tint="dark"
+                intensity={30}
+                style={StyleSheet.absoluteFill}
+              />
             ),
             tabBarActiveTintColor: COLORS.pink,
             tabBarInactiveTintColor: COLORS.gray,
@@ -150,10 +140,10 @@ export default function App() {
             }}
           />
           <Tab.Screen
-            name="Leaderboard"
+            name="Local"
             component={LeaderboardScreen}
             options={{
-              tabBarIcon: ({ color, size }) => <Trophy color={color} size={size} />,
+              tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
             }}
           />
           <Tab.Screen

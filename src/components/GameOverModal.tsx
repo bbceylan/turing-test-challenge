@@ -25,7 +25,6 @@ interface GameOverModalProps {
     onViewLeaderboard: () => void;
     showUpsell?: boolean;
     onGoPro?: () => void;
-    onWatchAd?: () => void;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -38,7 +37,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
     onViewLeaderboard,
     showUpsell,
     onGoPro,
-    onWatchAd,
 }) => {
     const { colors } = useTheme();
 
@@ -185,7 +183,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                         {showUpsell && (
                             <View style={styles.upsellContainer}>
                                 <Text style={styles.upsellTitle}>Keep the streak going</Text>
-                                <Text style={styles.upsellSub}>Go ad-free or watch one ad for 1 hour ad-free.</Text>
+                                <Text style={styles.upsellSub}>Unlock Pro to keep your momentum rolling.</Text>
                                 <View style={styles.upsellButtons}>
                                     <TouchableOpacity
                                         style={[styles.button, styles.upsellPrimary]}
@@ -193,14 +191,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                                         activeOpacity={0.8}
                                     >
                                         <Crown color={COLORS.navy} size={18} />
-                                        <Text style={styles.upsellPrimaryText}>Go Ad-Free</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.button, styles.upsellSecondary]}
-                                        onPress={onWatchAd}
-                                        activeOpacity={0.8}
-                                    >
-                                        <Text style={styles.upsellSecondaryText}>Watch Ad (1h)</Text>
+                                        <Text style={styles.upsellPrimaryText}>Unlock Pro</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -354,6 +345,7 @@ const styles = StyleSheet.create({
     upsellButtons: {
         flexDirection: 'row',
         gap: 10,
+        justifyContent: 'center',
     },
     upsellPrimary: {
         flex: 1,
@@ -365,16 +357,5 @@ const styles = StyleSheet.create({
         color: COLORS.navy,
         fontSize: 13,
         fontWeight: '800',
-    },
-    upsellSecondary: {
-        flex: 1,
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: COLORS.neonPink,
-    },
-    upsellSecondaryText: {
-        color: COLORS.neonPink,
-        fontSize: 12,
-        fontWeight: '700',
     },
 });

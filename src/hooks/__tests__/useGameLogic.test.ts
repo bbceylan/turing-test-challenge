@@ -17,10 +17,6 @@ jest.mock('../../utils/mockData', () => ({
     TextPair: {} // Type mock if needed, but TS handles it
 }));
 
-jest.mock('../../utils/ads', () => ({
-    showInterstitialIfReady: jest.fn(),
-}));
-
 describe('useGameLogic', () => {
     const mockAddXp = jest.fn();
 

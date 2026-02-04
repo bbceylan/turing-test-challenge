@@ -1,32 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, ActivityIndicator, Share } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Share, TextInput, ActivityIndicator } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useStore } from '../store/useStore';
-import { supabase } from '../utils/supabase';
-import { User, Edit3, Check, X, Share2 } from 'lucide-react-native';
+import { User, Edit3, Check, X } from 'lucide-react-native';
 import { COLORS, NEON_SHADOWS } from '../constants/theme';
-import { loadRewarded, showRewardedIfReady } from '../utils/ads';
+import { purchasePro, restoreProPurchases } from '../utils/iap';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 
 export const ProfileScreen = () => {
-    const { stats, session, user, isGuest, setGuest, setSession, isPro, setIsPro, adFreeUntil, friendCode, rewardedReady, qaOverlay, setQaOverlay, forceMockAds, setForceMockAds } = useStore();
+    const { stats, isPro, setIsPro, friendCode, qaOverlay, setQaOverlay, username, setUsername } = useStore();
     const { colors } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
-    const [username, setUsername] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [draftName, setDraftName] = useState('');
+    const [savingName, setSavingName] = useState(false);
     const [analytics, setAnalytics] = useState<{ accuracy: number; total: number; aiChoiceRate: number; topMissCategory: string | null }>({
         accuracy: 0,
         total: 0,
         aiChoiceRate: 0,
         topMissCategory: null,
     });
+    const proPulse = useSharedValue(1);
 
     useEffect(() => {
-        if (user && !isGuest) {
-            fetchProfile();
-        } else if (isGuest) {
-            setUsername('Guest Agent');
+        setDraftName(username || 'Offline Agent');
+    }, [username]);
+
+    useEffect(() => {
+        if (!isPro) {
+            proPulse.value = 1;
+            return;
         }
-    }, [user, isGuest]);
+        proPulse.value = withRepeat(
+            withTiming(1.08, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+            -1,
+            true
+        );
+    }, [isPro]);
 
     useEffect(() => {
         const loadAnalytics = async () => {
@@ -54,55 +63,6 @@ export const ProfileScreen = () => {
         loadAnalytics();
     }, []);
 
-    const fetchProfile = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('username')
-                .eq('id', user?.id)
-                .single();
-
-            if (error && error.code !== 'PGRST116') throw error;
-            if (data) setUsername(data.username || '');
-        } catch (error) {
-            console.error('Error fetching profile:', error);
-        }
-    };
-
-    const handleUpdateUsername = async () => {
-        if (isGuest) {
-            Alert.alert('Guest Mode', 'Sign in to save your agent name!');
-            return;
-        }
-        if (!username.trim()) return;
-        setLoading(true);
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: user?.id,
-                    username: username.trim(),
-                    updated_at: new Date().toISOString(),
-                });
-
-            if (error) throw error;
-            setIsEditing(false);
-            Alert.alert('Profile updated!');
-        } catch (error: any) {
-            Alert.alert('Error', error.message || 'Could not update username');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSignOut = async () => {
-        if (isGuest) {
-            setGuest(false); // Return to Auth Screen
-        } else {
-            await supabase.auth.signOut();
-        }
-    };
-
     const handleInvite = async () => {
         try {
             await Share.share({
@@ -125,42 +85,40 @@ export const ProfileScreen = () => {
     };
 
     const handlePurchase = async () => {
-        if (isGuest) {
-            Alert.alert('Guest Mode', 'Please sign in to upgrade to Pro.');
-            return;
-        }
-
         try {
             const { NativeModules } = require('react-native');
-            if (!NativeModules.RNPurchases) {
+            if (!NativeModules.RNIapModule && !NativeModules.RNIapIos && !NativeModules.RNIapAmazonModule) {
                 Alert.alert('Development Mode', 'In-App Purchases require a native build (not Expo Go).\n\nIf you are a developer, set `isPro: true` in the store manually.');
                 return;
             }
-
-            const Purchases = require('react-native-purchases').default;
-
-            try {
-                Alert.alert('Coming Soon', 'The Pro subscription is not yet configured in RevenueCat.');
-            } catch (e: any) {
-                Alert.alert('Store Error', e.message);
+            const purchase = await purchasePro();
+            if (purchase) {
+                setIsPro(true);
+                Alert.alert('Success', 'Pro unlocked. Enjoy ad-free play!');
             }
-
         } catch (error) {
             console.warn('Purchase flow failed:', error);
             Alert.alert('Error', 'Could not initiate purchase flow.');
         }
     };
 
-    const handleWatchAd = () => {
-        const shown = showRewardedIfReady();
-        if (!shown) {
-            loadRewarded();
-            Alert.alert('Loading Ad', 'Ad is loading. Please try again in a moment.');
+    const handleRestorePurchase = async () => {
+        try {
+            const restored = await restoreProPurchases();
+            if (restored) {
+                setIsPro(true);
+                Alert.alert('Restored', 'Your Pro unlock has been restored.');
+            } else {
+                Alert.alert('No Purchases', 'No previous purchases were found for this account.');
+            }
+        } catch {
+            Alert.alert('Error', 'Could not restore purchases.');
         }
     };
 
-    const adFreeActive = !!adFreeUntil && adFreeUntil > Date.now();
-    const adFreeUntilLabel = adFreeActive ? new Date(adFreeUntil as number).toLocaleTimeString() : null;
+    const proBadgeStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: proPulse.value }],
+    }));
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
@@ -175,31 +133,35 @@ export const ProfileScreen = () => {
                         <View style={styles.editRow}>
                             <TextInput
                                 style={[styles.input, { color: colors.text.primary, borderBottomColor: colors.border.active }]}
-                                value={username}
-                                onChangeText={setUsername}
+                                value={draftName}
+                                onChangeText={setDraftName}
                                 placeholder="Agent Name"
                                 placeholderTextColor={colors.text.secondary}
                                 autoFocus
+                                autoCapitalize="words"
+                                maxLength={30}
                             />
-                            <TouchableOpacity onPress={handleUpdateUsername} disabled={loading}>
-                                {loading ? <ActivityIndicator size="small" color={colors.text.accent} /> : <Check color={colors.text.accent} size={24} />}
+                            <TouchableOpacity onPress={handleUpdateUsername} disabled={savingName}>
+                                {savingName ? <ActivityIndicator size="small" color={colors.text.accent} /> : <Check color={colors.text.accent} size={24} />}
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setIsEditing(false)}>
+                            <TouchableOpacity onPress={() => { setIsEditing(false); setDraftName(username || 'Offline Agent'); }}>
                                 <X color={colors.feedback.error} size={24} />
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <TouchableOpacity style={styles.editRow} onPress={() => !isGuest && setIsEditing(true)}>
-                            <Text style={[styles.username, { color: colors.text.primary }]}>{username || 'Click to set name'}</Text>
-                            {!isGuest && <Edit3 color={colors.text.secondary} size={16} style={{ marginLeft: 8 }} />}
+                        <TouchableOpacity style={styles.editRow} onPress={() => setIsEditing(true)}>
+                            <Text style={[styles.username, { color: colors.text.primary }]}>{username || 'Offline Agent'}</Text>
+                            <Edit3 color={colors.text.secondary} size={16} style={{ marginLeft: 8 }} />
                         </TouchableOpacity>
                     )}
                     <View style={styles.badgeRow}>
+                        <Animated.View style={isPro ? proBadgeStyle : undefined}>
                         <Text style={[styles.badgeText, { color: isPro ? COLORS.neonCyan : colors.text.secondary }]}>
-                            {isPro ? 'Pro Agent' : 'Ad-Supported'}
+                            {isPro ? 'Pro Agent' : 'Free Agent'}
                         </Text>
+                        </Animated.View>
                     </View>
-                    <Text style={[styles.email, { color: colors.text.secondary }]}>{isGuest ? 'Offline Mode' : session?.user.email}</Text>
+                    <Text style={[styles.email, { color: colors.text.secondary }]}>Offline Mode</Text>
                 </View>
             </View>
 
@@ -221,14 +183,6 @@ export const ProfileScreen = () => {
                     <Text style={[styles.statValue, { color: COLORS.sunsetOrange }]}>{stats.maxStreak}</Text>
                 </View>
             </View>
-
-            {adFreeActive && (
-                <View style={[styles.noticeBox, { borderColor: COLORS.neonCyan }]}>
-                    <Text style={[styles.noticeText, { color: colors.text.primary }]}>
-                        Ad-free active until {adFreeUntilLabel}
-                    </Text>
-                </View>
-            )}
 
             <View
                 style={[styles.insightsBox, { borderColor: colors.border.default }]}
@@ -283,10 +237,10 @@ export const ProfileScreen = () => {
                     ]}
                     onPress={handlePurchase}
                     accessibilityRole="button"
-                    accessibilityLabel="Go Ad-Free"
-                    accessibilityHint="Purchase Pro subscription to remove ads"
+                    accessibilityLabel="Unlock Pro"
+                    accessibilityHint="One-time purchase to unlock Pro"
                 >
-                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>Go Ad-Free</Text>
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>Unlock Pro</Text>
                 </TouchableOpacity>
             )}
 
@@ -296,31 +250,14 @@ export const ProfileScreen = () => {
                         styles.button,
                         { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
                     ]}
-                    onPress={handleWatchAd}
-                    disabled={!rewardedReady}
+                    onPress={handleRestorePurchase}
                     accessibilityRole="button"
-                    accessibilityLabel="Watch Ad for Ad-Free Time"
-                    accessibilityHint="Watch a rewarded ad for one hour of ad-free play"
+                    accessibilityLabel="Restore Purchases"
+                    accessibilityHint="Restore your previous Pro purchase"
                 >
-                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
-                        {rewardedReady ? 'Watch Ad (1h Ad-Free)' : 'Ad Loading...'}
-                    </Text>
+                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>Restore Purchase</Text>
                 </TouchableOpacity>
             )}
-
-            <TouchableOpacity
-                style={[
-                    styles.button,
-                    styles.signOutButton,
-                    { borderColor: colors.feedback.error }
-                ]}
-                onPress={handleSignOut}
-                accessibilityRole="button"
-                accessibilityLabel={isGuest ? "Sign In" : "Sign Out"}
-                accessibilityHint={isGuest ? "Sign in to your account" : "Sign out of your account"}
-            >
-                <Text style={[styles.buttonText, { color: colors.text.primary }]}>{isGuest ? 'Sign Up / Sign In' : 'Sign Out'}</Text>
-            </TouchableOpacity>
 
             {__DEV__ && (
                 <TouchableOpacity
@@ -351,48 +288,6 @@ export const ProfileScreen = () => {
                 >
                     <Text style={[styles.buttonText, { color: colors.text.primary }]}>
                         {isPro ? 'Disable Pro (Dev)' : 'Enable Pro (Dev)'}
-                    </Text>
-                </TouchableOpacity>
-            )}
-
-            {__DEV__ && (
-                <TouchableOpacity
-                    style={[
-                        styles.button,
-                        { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
-                    ]}
-                    onPress={() => {
-                        if (!session || isGuest) {
-                            setGuest(false);
-                            setSession({ user: { id: 'dev-user', email: 'dev@local' } } as any);
-                        } else {
-                            setSession(null);
-                            setGuest(true);
-                        }
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Toggle login state"
-                    accessibilityHint="Developer toggle for testing authenticated and guest flows"
-                >
-                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
-                        {session && !isGuest ? 'Set Guest (Dev)' : 'Set Logged In (Dev)'}
-                    </Text>
-                </TouchableOpacity>
-            )}
-
-            {__DEV__ && (
-                <TouchableOpacity
-                    style={[
-                        styles.button,
-                        { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
-                    ]}
-                    onPress={() => setForceMockAds(!forceMockAds)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Toggle mock ads"
-                    accessibilityHint="Developer toggle for forcing mock ads"
-                >
-                    <Text style={[styles.buttonText, { color: colors.text.primary }]}>
-                        {forceMockAds ? 'Disable Mock Ads (Dev)' : 'Enable Mock Ads (Dev)'}
                     </Text>
                 </TouchableOpacity>
             )}
@@ -439,6 +334,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
+    input: {
+        flex: 1,
+        fontSize: 18,
+        borderBottomWidth: 1,
+        paddingVertical: 4,
+        marginRight: 10,
+        fontFamily: 'Menlo',
+    },
     badgeRow: {
         marginTop: 6,
         marginBottom: 4,
@@ -448,13 +351,6 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         textTransform: 'uppercase',
     },
-    input: {
-        flex: 1,
-        fontSize: 18,
-        borderBottomWidth: 1,
-        paddingVertical: 4,
-        marginRight: 10,
-    },
     email: {
         fontSize: 14,
         marginTop: 4,
@@ -463,19 +359,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 15,
         marginBottom: 40,
-    },
-    noticeBox: {
-        borderWidth: 1,
-        borderRadius: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        marginBottom: 20,
-        backgroundColor: 'rgba(0, 240, 255, 0.08)',
-    },
-    noticeText: {
-        fontSize: 12,
-        textAlign: 'center',
-        letterSpacing: 0.3,
     },
     insightsBox: {
         borderWidth: 1,
@@ -520,12 +403,19 @@ const styles = StyleSheet.create({
     premiumButton: {
         // Overrides in inline styles
     },
-    signOutButton: {
-        marginTop: 20,
-        backgroundColor: 'transparent',
-    },
     buttonText: {
         fontSize: 16,
         fontWeight: 'bold',
     },
 });
+    const handleUpdateUsername = async () => {
+        const next = draftName.trim();
+        if (!next) return;
+        setSavingName(true);
+        try {
+            setUsername(next);
+            setIsEditing(false);
+        } finally {
+            setSavingName(false);
+        }
+    };

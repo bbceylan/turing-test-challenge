@@ -1,14 +1,9 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useGameLogic } from '../useGameLogic';
 import { useStore } from '../../store/useStore';
-import { showInterstitialIfReady } from '../../utils/ads';
 
 // Mocks
 jest.mock('../../store/useStore');
-jest.mock('../../utils/ads', () => ({
-    showInterstitialIfReady: jest.fn(),
-}));
-
 // Mock Data
 jest.mock('../../utils/mockData', () => ({
     getRandomPair: jest.fn(() => ({
@@ -64,7 +59,6 @@ describe('useGameLogic', () => {
         expect(result.current.gameOver).toBe(false);
         expect(result.current.sessionStreak).toBe(1);
         expect(mockAddXp).toHaveBeenCalledWith(10, true);
-        expect(showInterstitialIfReady).toHaveBeenCalled();
     });
 
     it('handles incorrect guess and triggers game over', () => {
